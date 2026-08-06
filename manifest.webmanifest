@@ -1,0 +1,54 @@
+{
+  "name": "Noteises – Notizen & Checklisten",
+  "short_name": "Noteises",
+  "description": "Notizen & Checklisten – lokal und privat auf deinem Gerät.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1117",
+  "theme_color": "#4f46e5",
+  "categories": ["productivity", "utilities"],
+  "share_target": {
+    "action": "./noteises.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "Neue Notiz",
+      "short_name": "Notiz",
+      "description": "Schnell eine neue Notiz erstellen",
+      "url": "./noteises.html?new=1",
+      "icons": [{ "src": "./noteises-icon.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Neue Checkliste",
+      "short_name": "Liste",
+      "description": "Schnell eine neue Checkliste erstellen",
+      "url": "./noteises.html?new=1&type=list",
+      "icons": [{ "src": "./noteises-icon.png", "sizes": "512x512" }]
+    }
+  ],
+  "icons": [
+    {
+      "src": "./noteises-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./noteises-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

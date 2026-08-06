@@ -1,0 +1,2554 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Noteises – Notizen &amp; Checklisten</title>
+<meta name="description" content="Noteises – mobile Notizen- und Checklisten-App in einer HTML-Datei: eigene Labels, Checklisten, Suche, Export. Läuft komplett offline und ist als App installierbar.">
+<meta name="theme-color" id="metaTheme" content="#f4f5fa">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Noteises">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./noteises-icon.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><path d='M14 2v6h6'/><path d='M16 13H8'/><path d='M16 17H8'/><path d='M10 9H8'/></svg>">
+<style>
+/* ================= Grundlagen ================= */
+:root{
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --bg:#f4f5fa; --bg2:#eceef5;
+  --panel:#ffffff; --panel2:#f7f8fc; --panel3:#eef0f6;
+  --border:#e8eaf2; --border2:#d8dbe6;
+  --text:#141822; --muted:#5c6573; --faint:#9aa2b0;
+  --accent:#4f46e5; --accent2:#7c3aed; --accent-soft:#eef0ff; --accent-text:#fff;
+  --danger:#e11d48; --danger-soft:#ffe9ef;
+  --ok:#10b981;
+  --shadow-sm:0 1px 2px rgba(20,24,40,.05);
+  --shadow:0 1px 3px rgba(20,24,40,.05), 0 6px 18px rgba(20,24,40,.07);
+  --shadow-lg:0 12px 40px rgba(20,24,40,.16);
+  --r:18px;
+  --ease:cubic-bezier(.32,.72,0,1);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --kb:0px; /* Tastatur-Höhe (wird per visualViewport gesetzt) */
+}
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0e1117; --bg2:#0a0d12;
+  --panel:#161b25; --panel2:#1b2130; --panel3:#222a3c;
+  --border:#242c3d; --border2:#333d53;
+  --text:#eef1f8; --muted:#9aa4b8; --faint:#667085;
+  --accent:#6366f1; --accent2:#8b5cf6; --accent-soft:rgba(99,102,241,.16); --accent-text:#fff;
+  --danger:#fb7185; --danger-soft:rgba(251,113,133,.12);
+  --ok:#34d399;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow:0 1px 3px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+  --shadow-lg:0 14px 44px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  font-family:var(--font);background:var(--bg2);color:var(--text);
+  font-size:15px;line-height:1.5;overflow:hidden;
+  transition:background .3s,color .3s;
+  -webkit-touch-callout:none;
+}
+::selection{background:rgba(99,102,241,.3)}
+[hidden]{display:none !important}
+button{font-family:inherit;border:0;background:none;padding:0;cursor:pointer;color:inherit}
+input,textarea{font-family:inherit;border:0;outline:0;background:transparent;color:inherit}
+::-webkit-scrollbar{width:0;height:0}
+
+.app{
+  position:relative;max-width:560px;margin:0 auto;height:100dvh;height:100vh;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--bg);
+}
+@media(min-width:620px){
+  .app{border-left:1px solid var(--border);border-right:1px solid var(--border);box-shadow:0 0 60px rgba(20,24,40,.08)}
+}
+.no-scroll{overflow:hidden !important}
+
+/* ================= Kopfbereich ================= */
+.topbar{
+  flex:none;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:calc(8px + var(--safe-t)) 16px 10px;border-bottom:1px solid var(--border);
+  z-index:10;
+}
+.t-row1{display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.logoicon{
+  width:34px;height:34px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 4px 12px rgba(99,102,241,.4);
+}
+.logoicon svg{width:17px;height:17px}
+.logoname{font-size:18px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.ibtn{
+  width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--muted);transition:background .15s,color .15s;flex:none;
+}
+.ibtn:active{background:var(--panel3);transform:scale(.92)}
+.ibtn svg{width:21px;height:21px}
+.searchwrap{position:relative;margin-top:10px}
+.searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--faint);pointer-events:none}
+#search{
+  width:100%;background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:11px 40px 11px 40px;font-size:15px;color:var(--text);
+  box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s;
+}
+#search:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+#search::placeholder{color:var(--faint)}
+#searchClear{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;border-radius:10px;display:none;align-items:center;justify-content:center;color:var(--faint);
+}
+#searchClear:active{background:var(--panel3);color:var(--text)}
+#searchClear svg{width:15px;height:15px;position:static;transform:none}
+
+/* ================= Notizliste ================= */
+#listView{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px calc(150px + var(--safe-b) + var(--kb,0px));position:relative}
+.sec-title{
+  display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint);padding:14px 6px 8px;
+}
+.sec-title .n{background:var(--panel3);border-radius:999px;padding:1px 8px;font-size:10px}
+
+/* Karte mit roter Lösch-Fläche dahinter (Gmail-Stil) */
+.card{
+  position:relative;background:var(--danger);border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow-sm);
+  touch-action:pan-y;user-select:none;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease);
+}
+.card:active{transform:scale(.985);box-shadow:var(--shadow)}
+/* Lösch-Fläche links sichtbar (rot) & Pin-Fläche rechts (Akzent) */
+.del-reveal{
+  position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  color:#fff;opacity:0;transition:opacity .15s;pointer-events:none;
+}
+.pin-reveal{
+  position:absolute;left:18px;top:50%;transform:translateY(-50%);
+  color:#fff;opacity:0;transition:opacity .15s;pointer-events:none;
+}
+.card.mode-left .del-reveal{opacity:1}
+.card.mode-right .pin-reveal{opacity:1}
+.card.mode-right{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.del-reveal svg,.pin-reveal svg{width:26px;height:26px}
+.c-inner{
+  position:relative;background:var(--panel);display:flex;gap:12px;
+  padding:15px 16px 13px 18px;transition:transform .25s ease-out;
+}
+.card.swiping .c-inner{transition:none}
+/* Lösch-Animation: flüssig von der Fingerposition bis ganz raus, dann Kollaps (kein Stillstand) */
+@keyframes cardOut{
+  0%{transform:translateX(var(--sx,0px))}
+  70%{transform:translateX(-105%)}
+  100%{transform:translateX(-105%)}
+}
+@keyframes cardCollapse{
+  0%{height:var(--ch,140px);opacity:1;margin-bottom:10px;border-color:var(--border)}
+  70%{height:var(--ch,140px);opacity:1;margin-bottom:10px}
+  100%{height:0;opacity:0;margin-bottom:0;border-color:transparent}
+}
+.card.removing{overflow:hidden;animation:cardCollapse .6s cubic-bezier(.4,0,.2,1) forwards}
+.card.removing .c-inner{animation:cardOut .6s cubic-bezier(.45,0,.25,1) forwards}
+
+/* (Pin-Animation läuft jetzt als FLIP im JS – die Karte fliegt als Ganzes
+   zur Angepinnt-Sektion und KOMMT dort an; kein Ausfaden mehr) */
+.card .c-bar{position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0}
+.c-body{flex:1;min-width:0}
+.c-title{font-size:15.5px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;padding-right:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-title.notitle{color:var(--faint);font-style:italic;font-weight:600}
+.c-prev{font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c-meta{display:flex;align-items:center;gap:9px}
+.c-date{font-size:11.5px;color:var(--faint);font-weight:600}
+.c-pin{margin-left:auto;width:14px;height:14px;color:var(--accent);flex:none}
+.c-pin svg{width:14px;height:14px;fill:currentColor}
+.c-progress{width:52px;height:5px;border-radius:99px;background:var(--panel3);overflow:hidden;flex:none;margin-left:auto}
+.c-progress span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s var(--ease)}
+
+.empty{text-align:center;padding:64px 26px;color:var(--muted)}
+.empty .eico{
+  width:88px;height:88px;border-radius:30px;margin:0 auto 18px;
+  background:linear-gradient(135deg,var(--accent-soft),color-mix(in srgb,var(--accent2) 14%,var(--panel)));
+  display:flex;align-items:center;justify-content:center;font-size:40px;
+  box-shadow:var(--shadow);
+}
+.empty .eico svg{color:var(--accent);stroke-width:1.6}
+.empty b{display:block;color:var(--text);font-size:17px;margin-bottom:6px}
+.empty p{font-size:13.5px;margin:0 0 20px;line-height:1.6}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+  background:var(--panel);border:1px solid var(--border);color:var(--text);
+  border-radius:14px;padding:12px 20px;font-size:14px;font-weight:700;
+  transition:transform .15s var(--ease),filter .15s;box-shadow:var(--shadow-sm);
+}
+.btn:active{transform:scale(.95)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;box-shadow:0 8px 20px rgba(99,102,241,.35)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
+.btn svg{width:17px;height:17px}
+
+#fab{
+  position:absolute;right:18px;bottom:calc(84px + var(--safe-b));z-index:30;
+  width:58px;height:58px;border-radius:19px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 26px rgba(99,102,241,.45),0 2px 6px rgba(20,24,40,.15);
+  transition:transform .18s var(--ease),box-shadow .18s;
+}
+#fab svg{width:26px;height:26px}
+#fab:active{transform:scale(.88)}
+
+/* ================= App-Feeling: Splash, Ripple, Pull-to-Refresh ================= */
+/* Splash-Screen beim Start (wie eine native App) */
+#splash{
+  position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:linear-gradient(160deg,var(--accent),var(--accent2));
+  transition:opacity .45s ease,visibility .45s;
+}
+#splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.splash-logo{
+  width:88px;height:88px;border-radius:26px;
+  background:rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  box-shadow:0 18px 46px rgba(0,0,0,.28);animation:splashPop .5s var(--ease);
+}
+.splash-logo svg{width:46px;height:46px}
+.splash-name{color:#fff;font-size:23px;font-weight:800;letter-spacing:-.02em;animation:splashFade .6s .1s var(--ease) backwards}
+@keyframes splashPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes splashFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Material-Ripple auf allen Touch-Elementen */
+.card,.s-item,.sd-item,.sd-label,.btn,.chip,.d-act,.ibtn,.labelbtn,.cl-all,.cl-check,.cl-addbtn,.sd-add{
+  position:relative;overflow:hidden;
+}
+.ripple-ink{
+  position:absolute;border-radius:50%;background:currentColor;opacity:.08;
+  transform:scale(0);animation:rippleIn .85s cubic-bezier(.22,.61,.36,1) forwards;
+  pointer-events:none;z-index:2;
+}
+@keyframes rippleIn{to{transform:scale(1);opacity:0}}
+
+/* Pull-to-Refresh */
+#ptr{
+  height:0;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:height .25s var(--ease);
+}
+.ptr-spin{
+  width:28px;height:28px;border-radius:50%;
+  border:3px solid var(--border2);border-top-color:var(--accent);
+  opacity:0;transform:rotate(0deg);flex:none;
+}
+#ptr.active .ptr-spin{opacity:1;animation:ptrSpin .7s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+
+/* ===== Papierkorb ===== */
+.trash-head{
+  display:flex;align-items:center;gap:10px;padding:6px 4px 12px;
+}
+.trash-head b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.trash-head .n{font-size:11px;color:var(--faint);font-weight:800;background:var(--panel3);border-radius:999px;padding:2px 9px}
+.trash-head .sp{flex:1}
+.card.trash-card{background:var(--panel)}
+.card.trash-card .c-inner{background:var(--panel);padding-bottom:6px}
+.t-actions{display:flex;gap:8px;margin-top:10px}
+.t-actions .btn{flex:1;padding:9px 12px;font-size:13px;border-radius:12px}
+.btn.restore{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+.btn.del-forever{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
+
+/* Such-Treffer-Hervorhebung */
+mark{background:rgba(250,204,21,.45);color:inherit;border-radius:3px;padding:0 1px}
+.hits{
+  flex:none;font-size:11px;font-weight:800;color:var(--accent);
+  background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  border-radius:999px;padding:6px 11px;
+}
+
+/* Erster-Einstieg-Hinweis */
+#hintTip{
+  position:absolute;left:50%;bottom:calc(150px + var(--safe-b));transform:translateX(-50%);
+  z-index:35;background:var(--panel);border:1px solid var(--border);border-radius:15px;
+  box-shadow:var(--shadow-lg);padding:11px 18px;font-size:12.5px;font-weight:600;color:var(--muted);
+  max-width:90%;text-align:center;pointer-events:none;animation:hintIn .45s var(--ease);
+  white-space:nowrap;
+}
+@keyframes hintIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Karten-Entrance beim ersten Start (gestaffelt) */
+#listWrap.fresh .card{animation:cardIn .38s var(--ease) backwards}
+#listWrap.fresh .card:nth-child(2){animation-delay:.05s}
+#listWrap.fresh .card:nth-child(3){animation-delay:.1s}
+#listWrap.fresh .card:nth-child(4){animation-delay:.15s}
+#listWrap.fresh .card:nth-child(5){animation-delay:.2s}
+#listWrap.fresh .card:nth-child(6){animation-delay:.25s}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ================= Seitenleiste (Drawer) ================= */
+#sideBack{
+  position:absolute;inset:0;z-index:44;background:rgba(10,12,20,.45);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#sideBack.show{opacity:1;pointer-events:auto}
+#sidebar{
+  position:absolute;top:0;left:0;bottom:0;z-index:45;width:min(330px,88vw);
+  background:var(--panel);box-shadow:var(--shadow-lg);
+  display:flex;flex-direction:column;
+  transform:translateX(-105%);transition:transform .32s var(--ease);
+}
+#sidebar.open{transform:none}
+.sd-head{
+  flex:none;display:flex;align-items:center;gap:8px;
+  padding:calc(14px + var(--safe-t)) 12px 12px 18px;border-bottom:1px solid var(--border);
+}
+.sd-title{flex:1;font-size:17px;font-weight:800;letter-spacing:-.02em}
+.sd-close{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.sd-close:active{background:var(--panel3);transform:scale(.92)}
+.sd-close svg{width:20px;height:20px}
+.sd-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 12px calc(24px + var(--safe-b))}
+.sd-sec{
+  font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);padding:16px 8px 8px;
+}
+.sd-sep{height:1px;background:var(--border);margin:10px 8px}
+.sd-label{
+  display:flex;align-items:center;gap:10px;width:100%;padding:11px 10px;border-radius:13px;
+  font-size:14px;font-weight:600;text-align:left;transition:background .15s;
+}
+.sd-label:active{background:var(--panel3)}
+.sd-label.on{background:var(--accent-soft);color:var(--accent)}
+.sd-label .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sd-label .cnt{
+  font-size:11px;color:var(--faint);font-weight:800;background:var(--panel3);
+  border-radius:999px;padding:2px 8px;
+}
+.sd-label .ed{
+  width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);flex:none;
+}
+.sd-label .ed:active{background:var(--panel);color:var(--text)}
+.sd-label .ed svg{width:15px;height:15px}
+.sd-add{
+  display:flex;align-items:center;gap:8px;width:100%;margin-top:8px;
+  border:1.5px dashed var(--border2);border-radius:13px;padding:11px 12px;
+  font-size:13.5px;font-weight:700;color:var(--accent);transition:background .15s;
+}
+.sd-add:active{background:var(--accent-soft)}
+.sd-add svg{width:17px;height:17px}
+.sd-item{
+  display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border-radius:13px;
+  font-size:14px;font-weight:600;text-align:left;transition:background .15s;
+}
+.sd-item:active{background:var(--panel3)}
+.sd-item svg{width:20px;height:20px;color:var(--muted);flex:none}
+.sd-item .sp{flex:1}
+.sd-item .val{font-size:12px;color:var(--faint);font-weight:600}
+.sd-item.danger{color:var(--danger)}
+.sd-item.danger svg{color:var(--danger)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--border2)}
+.dotbig{width:20px;height:20px;border-radius:7px;flex:none}
+
+/* ================= Detailansicht ================= */
+#detailView{
+  position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;
+  background:var(--bg);transform:translateX(100%);
+  transition:transform .38s cubic-bezier(.22,1,.36,1), visibility .38s; /* federnder Einzug & Auszug */
+  visibility:hidden;
+}
+#detailView.open{transform:none;visibility:visible}
+.d-head{
+  flex:none;padding:calc(10px + var(--safe-t)) 14px 6px;display:flex;align-items:center;gap:6px;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);z-index:5;
+}
+#backBtn{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none}
+#backBtn:active{background:var(--panel3);transform:scale(.9)}
+#backBtn svg{width:22px;height:22px}
+#noteTitle{
+  flex:1;min-width:0;font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.3;
+  padding:6px 4px;color:var(--text);
+}
+#noteTitle::placeholder{color:var(--faint)}
+#pinBtn{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none;transition:all .15s}
+#pinBtn:active{transform:scale(.88)}
+#pinBtn svg{width:20px;height:20px}
+#pinBtn.on{color:var(--accent)}
+.d-meta{
+  flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 18px 12px;border-bottom:1px solid var(--border);
+}
+.d-dates{font-size:11.5px;color:var(--faint);font-weight:600}
+.d-meta .sp{flex:1}
+.labelbtn{
+  display:flex;align-items:center;gap:7px;flex:none;
+  background:var(--panel);border:1px solid var(--border);border-radius:999px;
+  padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--text);
+  box-shadow:var(--shadow-sm);transition:transform .15s,border-color .15s;
+}
+.labelbtn:active{transform:scale(.94)}
+.labelbtn:focus-visible{border-color:var(--accent)}
+.labelbtn .dot{width:10px;height:10px}
+.seg{display:flex;background:var(--panel3);border-radius:12px;padding:3px;gap:3px;flex:none}
+.seg button{
+  padding:7px 14px;border-radius:10px;font-size:12.5px;font-weight:700;color:var(--muted);
+  transition:all .18s var(--ease);
+}
+.seg button.on{background:var(--panel);color:var(--text);box-shadow:var(--shadow-sm)}
+
+.d-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px calc(150px + var(--safe-b) + var(--kb,0px));display:flex;flex-direction:column}
+#noteText{
+  flex:1;width:100%;font-size:16px;line-height:1.7;resize:none;min-height:180px;color:var(--text);
+}
+#noteText::placeholder{color:var(--faint)}
+
+#listEditor{display:flex;flex-direction:column;flex:1}
+.cl-head{
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  padding:14px 16px;box-shadow:var(--shadow-sm);margin-bottom:12px;
+}
+.cl-headrow{display:flex;align-items:center;gap:12px}
+.cl-ring{
+  width:44px;height:44px;border-radius:50%;flex:none;position:relative;
+  background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--panel3) 0);
+  display:flex;align-items:center;justify-content:center;
+}
+.cl-ring::before{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--panel)}
+.cl-ring b{position:relative;font-size:12px;font-weight:800}
+.cl-stats{font-size:13.5px;font-weight:700}
+.cl-stats small{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.cl-all{
+  margin-left:auto;flex:none;font-size:12.5px;font-weight:700;color:var(--accent);
+  border:1px solid var(--accent);border-radius:999px;padding:7px 13px;
+  background:var(--accent-soft);transition:transform .15s;
+}
+.cl-all:active{transform:scale(.92)}
+.cl-items{display:flex;flex-direction:column;gap:8px}
+.cl-row{
+  display:flex;align-items:center;gap:12px;background:var(--panel);
+  border:1px solid var(--border);border-radius:15px;padding:10px 12px;
+  box-shadow:var(--shadow-sm);transition:background .2s,opacity .3s;
+}
+.cl-row.done{opacity:.55}
+.cl-check{
+  width:28px;height:28px;border-radius:50%;flex:none;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;color:transparent;
+  transition:all .2s var(--ease);background:var(--panel);
+}
+.cl-check svg{width:15px;height:15px;stroke-width:3.2;transform:scale(0);transition:transform .2s var(--ease)}
+.cl-check:active{transform:scale(.85)}
+.cl-row.done .cl-check{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+.cl-row.done .cl-check svg{transform:scale(1)}
+.cl-text{flex:1;min-width:0;font-size:15.5px;padding:4px 0;line-height:1.45}
+.cl-row.done .cl-text{text-decoration:line-through;text-decoration-color:var(--faint)}
+.cl-del{
+  width:34px;height:34px;border-radius:11px;flex:none;color:var(--faint);
+  display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s,background .15s,color .15s;
+}
+.cl-row:hover .cl-del,.cl-row.focused .cl-del{opacity:1}
+.cl-del:active{background:var(--danger-soft);color:var(--danger)}
+.cl-del svg{width:16px;height:16px}
+.cl-add{
+  display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--panel);
+  border:1.5px dashed var(--border2);border-radius:15px;padding:10px 12px;
+}
+.cl-add input{flex:1;min-width:0;font-size:15.5px;padding:6px 0}
+.cl-add input::placeholder{color:var(--faint)}
+.cl-addbtn{
+  width:38px;height:38px;border-radius:12px;flex:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 5px 14px rgba(99,102,241,.4);transition:transform .15s;
+}
+.cl-addbtn:active{transform:scale(.88)}
+.cl-addbtn svg{width:18px;height:18px}
+
+/* Gestaffeltes Einblenden beim Öffnen der Notiz */
+#detailView.open .d-head{animation:dfade .3s ease .03s both}
+#detailView.open .d-meta{animation:dfade .3s ease .09s both}
+#detailView.open .d-scroll{animation:dfade .32s ease .15s both}
+@keyframes dfade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Schwebendes Aktions-Dock */
+.d-bar{
+  position:absolute;left:12px;right:12px;bottom:calc(60px + var(--safe-b));z-index:6;
+  display:flex;align-items:stretch;justify-content:space-around;gap:4px;
+  background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--border);border-radius:24px;box-shadow:var(--shadow-lg);
+  padding:8px 6px;
+}
+.d-act{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:11px;font-weight:700;color:var(--muted);min-height:58px;border-radius:16px;
+  transition:background .15s;
+}
+.d-act .ico{
+  width:46px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  transition:transform .12s;
+}
+.d-act:active{background:var(--panel3)}
+.d-act:active .ico{transform:scale(.88)}
+.d-act svg{width:21px;height:21px}
+.d-act.danger{color:var(--danger)}
+.d-act.danger:active{background:var(--danger-soft)}
+.d-act.on{color:var(--accent)}
+
+/* ================= Bottom-Sheet ================= */
+#sheetBack{
+  position:absolute;inset:0;z-index:50;background:rgba(10,12,20,.45);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#sheetBack.show{opacity:1;pointer-events:auto}
+#sheet{
+  position:absolute;left:0;right:0;bottom:var(--kb,0px);z-index:51;
+  background:var(--panel);border-radius:24px 24px 0 0;
+  box-shadow:var(--shadow-lg);
+  /* IMMER komplett unter den sichtbaren Bereich geschoben: 150vh reicht garantiert,
+     egal wie hoch das Sheet ist und ob die Tastatur offen ist (kein "Menü-Rest" möglich) */
+  transform:translateY(150vh);
+  transition:transform .3s var(--ease),bottom .25s ease,max-height .25s ease;
+  display:flex;flex-direction:column;
+  padding-bottom:calc(16px + var(--safe-b));
+  touch-action:pan-y;
+}
+#sheet.show{transform:none}
+/* Eingabe-Sheets (Label-Formular): volle Höhe, oben bündig –
+   das Formular liegt oben, unten bleibt Platz für die Tastatur.
+   Keinerlei bottom/max-height-Übergang → das Menü verändert sich nie. */
+#sheet.sheet-input{
+  bottom:0;
+  height:100%;
+  max-height:100%;
+  transition:transform .3s var(--ease);
+}
+.s-head{
+  flex:none;padding:12px 16px 2px;cursor:grab;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.s-head.dragging{cursor:grabbing}
+.s-grab{width:44px;height:5px;border-radius:99px;background:var(--border2);margin:0 auto 10px}
+.s-hint{font-size:11px;color:var(--faint);text-align:center;font-weight:600;padding:0 0 8px;opacity:.9}
+#sheetTitle{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 6px 10px}
+#sheetBody{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 14px 20px}
+.s-item{
+  width:100%;display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:14px;
+  font-size:15px;font-weight:600;text-align:left;transition:background .15s;
+}
+.s-item:active{background:var(--panel3)}
+.s-item svg{width:21px;height:21px;color:var(--muted);flex:none}
+.s-item.danger{color:var(--danger)}
+.s-item.danger svg{color:var(--danger)}
+.s-item .sub{display:block;font-size:12px;color:var(--faint);font-weight:500;margin-top:1px}
+.s-item .sp{flex:1}
+.s-check{
+  width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);flex:none;
+  display:flex;align-items:center;justify-content:center;transition:all .18s;
+}
+.s-check svg{width:12px;height:12px;color:#fff;opacity:0;transform:scale(0);transition:all .18s var(--ease)}
+.s-item.sel .s-check{background:var(--accent);border-color:var(--accent)}
+.s-item.sel .s-check svg{opacity:1;transform:scale(1)}
+.s-sep{height:1px;background:var(--border);margin:6px 10px}
+
+/* Label-Formular im Sheet */
+.lf-name{padding:4px 6px 14px}
+.lf-name input{
+  width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;font-size:15px;color:var(--text);transition:border-color .15s,box-shadow .15s;
+}
+.lf-name input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.lf-colors{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:4px 6px 16px}
+.lf-col{
+  width:36px;height:36px;border-radius:50%;border:3px solid transparent;
+  transition:transform .15s,box-shadow .15s;
+}
+.lf-col:active{transform:scale(1.15)}
+.lf-col.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+.lf-custom{
+  width:36px;height:36px;border-radius:50%;border:2px dashed var(--border2);
+  padding:0;overflow:hidden;background:var(--panel2);
+}
+.lf-custom::-webkit-color-swatch-wrapper{padding:2px}
+.lf-custom::-webkit-color-swatch{border:none;border-radius:50%}
+.lf-actions{display:flex;gap:10px;padding:4px 6px}
+.lf-actions .btn{flex:1}
+
+/* ================= Toasts ================= */
+#toasts{
+  position:absolute;left:50%;bottom:calc(140px + var(--safe-b) + var(--kb,0px));transform:translateX(-50%);
+  z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:92%;
+}
+.toast{
+  display:flex;align-items:center;gap:12px;
+  background:var(--panel);border:1px solid var(--border);border-radius:15px;
+  box-shadow:var(--shadow-lg);padding:11px 12px 11px 17px;font-size:13.5px;font-weight:600;
+  animation:tin .28s var(--ease);max-width:100%;
+}
+@keyframes tin{from{opacity:0;transform:translateY(14px) scale(.95)}to{opacity:1;transform:none}}
+.toast button{
+  flex:none;background:var(--accent);color:#fff;border-radius:10px;padding:8px 14px;
+  font-size:13px;font-weight:800;transition:filter .15s,transform .12s;
+}
+.toast button:active{filter:brightness(1.2);transform:scale(.94)}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ============ SPLASH ============ -->
+  <div id="splash">
+    <div class="splash-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+    </div>
+    <div class="splash-name">Noteises</div>
+  </div>
+
+  <!-- ============ KOPF ============ -->
+  <header class="topbar">
+    <div class="t-row1">
+      <div class="logo">
+        <div class="logoicon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+        </div>
+        <span class="logoname">Noteises</span>
+      </div>
+      <button class="ibtn" id="menuBtn" aria-label="Menü öffnen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <input type="file" id="importInput" accept=".json,application/json" hidden>
+    </div>
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="search" type="search" placeholder="Notizen &amp; Checklisten durchsuchen…" autocomplete="off" spellcheck="false">
+      <button id="searchClear" aria-label="Suche leeren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ LISTE ============ -->
+  <main id="listView" tabindex="-1">
+    <div id="ptr"><div class="ptr-spin"></div></div>
+    <div id="listWrap"></div>
+  </main>
+
+  <button id="fab" aria-label="Neue Notiz">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <!-- ============ DETAIL ============ -->
+  <section id="detailView" aria-hidden="true">
+    <div class="d-head">
+      <button id="backBtn" aria-label="Zurück">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      </button>
+      <input id="noteTitle" type="text" placeholder="Titel" autocomplete="off" maxlength="120">
+      <button id="pinBtn" aria-label="Anpinnen"></button>
+    </div>    <div class="d-meta">
+      <span class="d-dates" id="dates"></span>
+      <span class="sp"></span>
+      <button class="labelbtn" id="labelBtn">
+        <span class="dot" id="labelBtnDot"></span>
+        <span id="labelBtnText">Kein Label</span>
+      </button>
+      <span class="hits" id="hitsChip" hidden></span>
+      <div class="seg" id="typeSeg">
+        <button data-type="text" class="on">Text</button>
+        <button data-type="list">Liste</button>
+      </div>
+    </div>
+    <div class="d-scroll" id="dScroll">
+      <textarea id="noteText" placeholder="Notiz schreiben …" spellcheck="true"></textarea>
+      <div id="listEditor" hidden>
+        <div class="cl-head">
+          <div class="cl-headrow">
+            <div class="cl-ring"><b id="clPct">0%</b></div>
+            <div class="cl-stats"><span id="clStats">0 von 0 erledigt</span></div>
+            <button class="cl-all" id="clToggleAll">Alle abhaken</button>
+          </div>
+        </div>
+        <div class="cl-items" id="clItems"></div>
+        <div class="cl-add">
+          <input id="clNew" type="text" placeholder="Neues Element hinzufügen…" maxlength="200">
+          <button class="cl-addbtn" id="clAddBtn" aria-label="Element hinzufügen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="d-bar">
+      <button class="d-act" id="dPin" aria-label="Anpinnen">
+        <span class="ico"></span><span>Pinnen</span>
+      </button>
+      <button class="d-act" id="dExport" aria-label="Exportieren">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></span><span>Export</span>
+      </button>
+      <button class="d-act danger" id="dDelete" aria-label="Löschen">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></span><span>Löschen</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ SEITENLEISTE ============ -->
+  <div id="sideBack"></div>
+  <aside id="sidebar" aria-hidden="true">
+    <div class="sd-head">
+      <div class="logoicon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+      </div>
+      <div class="sd-title">Noteises</div>
+      <button class="sd-close" id="sideClose" aria-label="Menü schließen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sd-scroll">
+      <div class="sd-sec">Labels</div>
+      <div id="sideLabels"></div>
+      <button class="sd-add" id="addLabelBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Neues Label
+      </button>
+      <div class="sd-sep"></div>
+      <button class="sd-item" id="sideTrash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        <span>Papierkorb</span><span class="sp"></span><span class="val" id="sideTrashVal">0</span>
+      </button>
+      <div class="sd-sep"></div>
+      <div class="sd-sec">Einstellungen</div>
+      <button class="sd-item" id="sideTheme">
+        <svg id="sideThemeIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <span>Design</span><span class="sp"></span><span class="val" id="sideThemeVal">Hell</span>
+      </button>
+      <button class="sd-item" id="sideSort">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4"/></svg>
+        <span>Sortierung</span><span class="sp"></span><span class="val" id="sideSortVal">Bearbeitet</span>
+      </button>
+      <button class="sd-item" id="sideBackup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span>Alle Notizen sichern</span>
+      </button>
+      <button class="sd-item" id="sideImport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <span>Sicherung importieren</span>
+      </button>
+      <button class="sd-item" id="sideInstall" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <span>App installieren</span>
+      </button>
+      <button class="sd-item" id="sideAbout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Über Noteises</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ SHEETS ============ -->
+  <div id="sheetBack"></div>
+  <div id="sheet" role="dialog" aria-modal="true">
+    <div class="s-head" id="sheetHead">
+      <div class="s-grab"></div>
+      <div class="s-hint" id="sheetHint">Nach unten ziehen zum Schließen</div>
+      <div id="sheetTitle"></div>
+    </div>
+    <div id="sheetBody"></div>
+  </div>
+
+  <div id="hintTip" hidden>👈 Wischen löscht · 👉 Wischen pinnt · Gedrückt halten öffnet Menü</div>
+  <div id="toasts"></div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   Noteises – mobile Notizen & Checklisten
+   Eine HTML-Datei · Service Worker · Export: TXT/MD/HTML/JSON
+   ============================================================ */
+
+const $  = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Such-Treffer im Text hervorheben (<mark>) – HTML-sicher */
+function hl(text, q){
+  const t = String(text);
+  if(!q) return esc(t);
+  const lower = t.toLowerCase(), lq = q.toLowerCase();
+  let out = '', i = 0;
+  while(i < t.length){
+    const j = lower.indexOf(lq, i);
+    if(j === -1){ out += esc(t.slice(i)); break; }
+    out += esc(t.slice(i, j)) + '<mark>' + esc(t.slice(j, j + lq.length)) + '</mark>';
+    i = j + lq.length;
+  }
+  return out;
+}
+function countMatches(text, q){
+  if(!q) return 0;
+  const lower = String(text).toLowerCase(), lq = q.toLowerCase();
+  let c = 0, i = 0;
+  while((i = lower.indexOf(lq, i)) !== -1){ c++; i += lq.length; }
+  return c;
+}
+
+/* ---------- Konstanten ---------- */
+const LS_KEY = 'noteises-v3';
+const LS_KEY_OLD = 'notizwerk-v2';
+const THEME_KEY = 'noteises-theme-v3';
+const DEFAULT_LABELS = [
+  { id:'idea',        name:'Idee',       color:'#f59e0b' },
+  { id:'todo',        name:'Aufgabe',    color:'#10b981' },
+  { id:'wichtig',     name:'Wichtig',    color:'#ef4444' },
+  { id:'info',        name:'Info',       color:'#3b82f6' },
+  { id:'persoenlich', name:'Persönlich', color:'#a855f7' }
+];
+const LABEL_COLORS = ['#ef4444','#f59e0b','#10b981','#3b82f6','#6366f1','#a855f7','#ec4899','#14b8a6'];
+
+/* ---------- Icons ---------- */
+const I = {
+  pin:    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"/></svg>',
+  pinOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+  sun:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  tag:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/></svg>',
+  dl:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
+  up:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  x:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+};
+
+/* ---------- Zustand ---------- */
+let notes = [];
+let labels = [];
+let currentId = null;
+let query = '';
+let labelFilter = '';
+let trashView = false;
+let sortMode = 'updated';
+let saveTimer = null;
+let dirty = false;
+let deletePending = null;
+let switching = false;
+let deferredPrompt = null;
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+const now = () => Date.now();
+
+const getLabel = id => labels.find(l => l.id === id) || null;
+
+/* ---------- Daten ---------- */
+function loadData(){
+  labels = DEFAULT_LABELS.map(l => ({ ...l }));
+  let raw = null;
+  try { raw = localStorage.getItem(LS_KEY); } catch(e){}
+  if(raw){
+    try {
+      const data = JSON.parse(raw);
+      if(data && Array.isArray(data.notes)){
+        if(Array.isArray(data.labels) && data.labels.length) labels = data.labels.map(normalizeLabel);
+        notes = data.notes.map(n => normalizeNote(n));
+        return;
+      }
+    } catch(e){}
+  }
+  // Migration von Notizwerk v2
+  try {
+    const old = localStorage.getItem(LS_KEY_OLD);
+    if(old){
+      const data = JSON.parse(old);
+      if(data && Array.isArray(data.notes)){
+        notes = data.notes.map(n => normalizeNote(Object.assign({ type:'text', items:[] }, n)));
+        saveNow();
+        return;
+      }
+    }
+  } catch(e){}
+  notes = seedNotes().map(normalizeNote);
+  purgeTrash();
+}
+function normalizeLabel(l){
+  const c = String(l.color || '#6366f1');
+  return {
+    id:    String(l.id || uid()),
+    name:  String(l.name || 'Label').slice(0, 24),
+    color: /^#[0-9a-f]{6}$/i.test(c) ? c : '#6366f1'
+  };
+}
+function normalizeNote(n){
+  return {
+    id:        String(n.id || uid()),
+    title:     String(n.title || ''),
+    text:      String(n.text || ''),
+    // sessionNew wird bewusst NICHT übernommen → geladene Notizen sind "bestehend"
+    type:      n.type === 'list' ? 'list' : 'text',
+    items:     Array.isArray(n.items) ? n.items.map(i => ({
+                 id: String(i.id || uid()),
+                 t:  String(i.t || i.text || ''),
+                 d:  !!i.d
+               })).filter(i => i.t) : [],
+    label:     labels.some(l => l.id === n.label) ? String(n.label) : '',
+    pinned:    !!n.pinned,
+    deletedAt: typeof n.deletedAt === 'number' ? n.deletedAt : null,
+    createdAt: typeof n.createdAt === 'number' ? n.createdAt : now(),
+    updatedAt: typeof n.updatedAt === 'number' ? n.updatedAt : now()
+  };
+}
+function seedNotes(){
+  const t = now();
+  return [
+    {
+      id: uid(), title: 'Willkommen bei Noteises 👋', type:'text',
+      text: 'Deine Notizen & Checklisten – alles offline auf diesem Gerät.\n\n• Wischen: Streiche eine Notiz nach links, um sie zu löschen (mit Rückgängig)\n• Gedrückt halten: öffnet das Aktionsmenü einer Notiz\n• ☰: öffnet die Seitenleiste – dort kannst du eigene Labels anlegen und verwalten\n• +: neue Notiz erstellen · „Liste“: macht eine abhakbare Checkliste daraus\n• Export: über die Seitenleiste oder unten in der Notiz',
+      label:'info', pinned:true, createdAt:t, updatedAt:t
+    },
+    {
+      id: uid(), title: 'Wochenende', type:'list',
+      text:'', items:[
+        { id:uid(), t:'Balkon bepflanzen', d:true },
+        { id:uid(), t:'Wandern im Erzgebirge', d:false },
+        { id:uid(), t:'Fotos sortieren', d:false },
+        { id:uid(), t:'Neues Rezept ausprobieren', d:false }
+      ],
+      label:'todo', pinned:false, createdAt:t-3600e3, updatedAt:t-3600e3
+    },
+    {
+      id: uid(), title: 'Ideen-Sammlung', type:'text',
+      text:'– Blog über lokale Kaffeehäuser starten\n– Winterwochenende in Leipzig\n– Eigene Kräutermischung entwickeln',
+      label:'idea', pinned:false, createdAt:t-7200e3, updatedAt:t-7200e3
+    }
+  ];
+}
+function saveNow(){
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  try {
+    // sessionNew ist nur ein Sitzungs-Flag und wird bewusst nicht gespeichert
+    localStorage.setItem(LS_KEY, JSON.stringify(
+      { app:'noteises', version:3, notes, labels },
+      (k, v) => k === 'sessionNew' ? undefined : v
+    ));
+  } catch(e){}
+  dirty = false;
+}
+function markDirty(){
+  dirty = true;
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 400);
+}
+
+/* ---------- Theme ---------- */
+function applyTheme(t, persist){
+  document.documentElement.setAttribute('data-theme', t);
+  $('#metaTheme').setAttribute('content', t === 'dark' ? '#0e1117' : '#f4f5fa');
+  $('#sideThemeIco').innerHTML = t === 'dark' ? I.sun : I.moon;
+  $('#sideThemeVal').textContent = t === 'dark' ? 'Dunkel' : 'Hell';
+  if(persist){ try { localStorage.setItem(THEME_KEY, t); } catch(e){} }
+}
+function initTheme(){
+  let t = null;
+  try { t = localStorage.getItem(THEME_KEY); } catch(e){}
+  if(!t){
+    try { t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch(e){ t = 'light'; }
+  }
+  applyTheme(t === 'dark' ? 'dark' : 'light', false);
+}
+
+/* ---------- Helfer ---------- */
+function fmtDate(ts){
+  const d = new Date(ts), nd = new Date();
+  const hm = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+  if(d.toDateString() === nd.toDateString()) return 'Heute, ' + hm;
+  const y = new Date(nd); y.setDate(nd.getDate() - 1);
+  if(d.toDateString() === y.toDateString()) return 'Gestern, ' + hm;
+  return d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit' }) + ', ' + hm;
+}
+function wordCount(t){ const m = String(t).trim().match(/\S+/g); return m ? m.length : 0; }
+function slugify(t){
+  return String(t || '').toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'notiz';
+}
+function linkify(text){
+  return esc(text).replace(/(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+function download(filename, content, type){
+  const blob = new Blob([content], { type: type || 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+function vibrate(ms){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+
+/* ---------- Toast ---------- */
+function toast(msg, actionLabel, onAction, duration){
+  const wrap = $('#toasts');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = '<span>' + esc(msg) + '</span>';
+  if(actionLabel && onAction){
+    const b = document.createElement('button');
+    b.textContent = actionLabel;
+    b.addEventListener('click', () => { onAction(); t.remove(); });
+    t.appendChild(b);
+  }
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 320); }, duration || 3800);
+}
+
+/* ---------- Bottom-Sheet ---------- */
+function openSheet(title, items){
+  $('#sheetTitle').textContent = title;
+  const body = $('#sheetBody');
+  body.innerHTML = '';
+  body.scrollTop = 0;
+  for(const it of items){
+    if(it === '-'){
+      const sep = document.createElement('div');
+      sep.className = 's-sep';
+      body.appendChild(sep);
+      continue;
+    }
+    const b = document.createElement('button');
+    b.className = 's-item' + (it.danger ? ' danger' : '') + (it.sel ? ' sel' : '');
+    b.innerHTML =
+      (it.icon ? it.icon : '<span class="s-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>') +
+      '<span>' + esc(it.label) + (it.sub ? '<span class="sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
+      (it.value !== undefined ? '<span class="sp"></span><span style="color:var(--muted);font-size:13px">' + esc(it.value) + '</span>' : '');
+    b.addEventListener('click', () => {
+      if(it.fn) it.fn();
+      if(!it.noClose) closeSheet(); // Punkte, die ein Unter-Sheet öffnen, offen lassen
+    });
+    body.appendChild(b);
+  }
+  showSheet();
+}
+function openSheetCustom(title, build, opts){
+  opts = opts || {};
+  $('#sheetTitle').textContent = title;
+  const body = $('#sheetBody');
+  body.innerHTML = '';
+  body.scrollTop = 0;
+  build(body);
+  const sheet = $('#sheet');
+  sheet.classList.toggle('sheet-input', !!opts.fullHeight);
+  if(opts.fullHeight){
+    // Inline-Werte löschen, damit die CSS-Regel (height:100%) wirklich greift
+    sheet.style.maxHeight = '';
+    sheet.style.bottom = '';
+  }
+  if(opts.focusInput){
+    // Tastatur ZUERST öffnen, dann Sheet zeigen (nur noch von anderen Stellen genutzt)
+    const inp = body.querySelector('input,textarea');
+    if(inp) inp.focus();
+    setTimeout(() => { syncKeyboard(); showSheet(); }, 200);
+  } else {
+    showSheet();
+  }
+}
+function showSheet(){
+  $('#sheet').style.transform = '';
+  syncKeyboard(); // Sheet-Höhe an den sichtbaren Bereich anpassen
+  $('#sheetBack').classList.add('show');
+  $('#sheet').classList.add('show');
+  document.body.classList.add('no-scroll');
+  vibrate(6);
+  pushOverlayState();
+}
+function closeSheet(){
+  const sheet = $('#sheet');
+  sheet.classList.remove('show');
+  sheet.style.transform = '';
+  // Eingabe-Sheet-Status zurücksetzen (nächstes Öffnen startet frisch)
+  sheet.classList.remove('sheet-input');
+  sheet.style.maxHeight = '';
+  $('#sheetBack').classList.remove('show');
+  document.body.classList.remove('no-scroll');
+  // Tastatur sauber schließen, wenn das Eingabefeld im Sheet fokussiert war
+  const ae = document.activeElement;
+  if(ae && sheet.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) ae.blur();
+}
+$('#sheetBack').addEventListener('click', closeSheet);
+
+/* Drag-to-close: überall auf dem Sheet nach unten ziehen (scroll-bewusst) */
+function initSheetDrag(){
+  const sheet = $('#sheet'), body = $('#sheetBody'), hint = $('#sheetHint');
+  let drag = null;
+
+  sheet.addEventListener('pointerdown', e => {
+    if(!sheet.classList.contains('show')) return;
+    if(e.target.closest('button,input,select,textarea,a')) return;
+    if(body.scrollTop > 0) return; // Inhalt ist gescrollt → natives Scrollen zuerst
+    drag = {
+      startY: e.clientY, lastY: e.clientY,
+      lastT: performance.now(), v: 0, dy: 0
+    };
+    sheet.style.transition = 'none';
+    hint.textContent = 'Zum Schließen loslassen';
+    try { sheet.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  sheet.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const t = performance.now();
+    const dt = Math.max(1, t - drag.lastT);
+    drag.v = (e.clientY - drag.lastY) / dt;
+    drag.lastY = e.clientY; drag.lastT = t;
+    if(body.scrollTop > 0){ drag = null; sheet.style.transform = ''; sheet.style.transition = ''; return; }
+    let dy = e.clientY - drag.startY;
+    if(dy < 0) dy *= 0.3;
+    drag.dy = dy;
+    sheet.style.transform = 'translateY(' + dy + 'px)';
+  });
+  const end = () => {
+    if(!drag) return;
+    const d = drag;
+    drag = null;
+    const h = sheet.offsetHeight || 400;
+    const shouldClose = d.dy > 130 || d.dy > h * 0.3 || (d.dy > 50 && d.v > 0.6);
+    sheet.style.transition = '';
+    if(shouldClose){
+      // closeSheet() übernimmt: weiches Wegschwingen, Klassen-Reset UND
+      // das Schließen der Tastatur (Input-Blur), falls das Feld fokussiert war.
+      closeSheet();
+    } else {
+      sheet.style.transform = '';
+    }
+    hint.textContent = 'Nach unten ziehen zum Schließen';
+  };
+  sheet.addEventListener('pointerup', end);
+  sheet.addEventListener('pointercancel', end);
+}
+
+/* ---------- Seitenleiste ---------- */
+function openSidebar(){
+  $('#sidebar').classList.add('open');
+  $('#sidebar').setAttribute('aria-hidden', 'false');
+  $('#sideBack').classList.add('show');
+  document.body.classList.add('no-scroll');
+  pushOverlayState();
+}
+function closeSidebar(){
+  $('#sidebar').classList.remove('open');
+  $('#sidebar').setAttribute('aria-hidden', 'true');
+  $('#sideBack').classList.remove('show');
+  document.body.classList.remove('no-scroll');
+}
+$('#sideBack').addEventListener('click', closeSidebar);
+
+function renderSidebar(){
+  // Labels
+  const wrap = $('#sideLabels');
+  wrap.innerHTML = '';
+  const mk = (label, on) => {
+    const row = document.createElement('div');
+    row.className = 'sd-label' + (on ? ' on' : '');
+    const count = notes.filter(n =>
+      (!label || n.label === label) &&
+      (!query.trim() || n.title.toLowerCase().includes(query.trim().toLowerCase()) ||
+       n.text.toLowerCase().includes(query.trim().toLowerCase()) ||
+       (n.items||[]).some(i => i.t.toLowerCase().includes(query.trim().toLowerCase())))
+    ).length;
+    row.innerHTML =
+      '<span class="dot" style="background:' + (label ? getLabel(label).color : 'var(--border2)') + '"></span>' +
+      '<span class="nm">' + esc(label ? getLabel(label).name : 'Alle Notizen') + '</span>' +
+      '<span class="cnt">' + count + '</span>' +
+      (label ? '<span class="ed" data-edit="' + esc(label) + '">' + I.edit + '</span>' : '');
+    row.addEventListener('click', e => {
+      if(e.target.closest('.ed')){
+        openLabelForm(label);
+        return;
+      }
+      labelFilter = (labelFilter === label) ? '' : label;
+      trashView = false;
+      renderSidebar();
+      renderList();
+    });
+    wrap.appendChild(row);
+  };
+  mk('', !labelFilter);
+  labels.forEach(l => mk(l.id, labelFilter === l.id));
+
+  // Papierkorb-Zähler
+  const tVal = $('#sideTrashVal');
+  if(tVal) tVal.textContent = String(trashNotes().length);
+  const tItem = $('#sideTrash');
+  if(tItem) tItem.classList.toggle('on', trashView);
+
+  // Einstellungen-Werte
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  $('#sideThemeIco').innerHTML = dark ? I.sun : I.moon;
+  $('#sideThemeVal').textContent = dark ? 'Dunkel' : 'Hell';
+  $('#sideSortVal').textContent = sortMode === 'created' ? 'Erstellt' : sortMode === 'title' ? 'A–Z' : 'Bearbeitet';
+}
+
+/* ---------- Label-Verwaltung ---------- */
+function openLabelForm(labelId){
+  const editing = labelId ? getLabel(labelId) : null;
+  // Kein Auto-Fokus: Das Menü fährt hoch (volle Höhe, oben bündig) und zeigt
+  // Eingabefeld, Farben und Buttons auf einen Blick. Die Tastatur öffnet sich
+  // erst, wenn man ins Feld tippt – das Menü verändert sich dabei überhaupt nicht.
+  const open = openSheetCustom(editing ? 'Label bearbeiten' : 'Neues Label', body => {
+    body.innerHTML =
+      '<div class="lf-name"><input id="lfName" maxlength="24" placeholder="Label-Name (z. B. Urlaub, Arbeit, Familie)…" value="' + esc(editing ? editing.name : '') + '"></div>' +
+      '<div class="lf-colors" id="lfColors"></div>' +
+      '<div class="lf-actions">' +
+        '<button class="btn primary" id="lfSave">Speichern</button>' +
+        (editing ? '<button class="btn danger" id="lfDel">Löschen</button>' : '') +
+      '</div>';
+    let chosen = editing ? editing.color : LABEL_COLORS[0];
+    const colors = $('#lfColors');
+    const paint = () => {
+      colors.innerHTML = '';
+      for(const c of LABEL_COLORS){
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'lf-col' + (chosen === c ? ' on' : '');
+        b.style.background = c;
+        b.addEventListener('click', () => { chosen = c; paint(); });
+        colors.appendChild(b);
+      }
+      const custom = document.createElement('input');
+      custom.type = 'color';
+      custom.className = 'lf-custom';
+      custom.value = chosen;
+      custom.title = 'Eigene Farbe';
+      custom.addEventListener('input', () => { chosen = custom.value; paint(); });
+      colors.appendChild(custom);
+    };
+    paint();
+    $('#lfSave').addEventListener('click', () => {
+      const name = $('#lfName').value.trim();
+      if(!name){ $('#lfName').focus(); return; }
+      if(editing){
+        editing.name = name;
+        editing.color = chosen;
+      } else {
+        labels.push({ id: uid(), name: name, color: chosen });
+      }
+      saveNow();
+      renderSidebar();
+      renderDetail();
+      closeSheet();
+      toast(editing ? '✓ Label aktualisiert' : '✓ Label „' + name + '“ erstellt');
+    });
+    if(editing){
+      $('#lfDel').addEventListener('click', () => {
+        notes.forEach(n => { if(n.label === editing.id) n.label = ''; });
+        labels = labels.filter(l => l.id !== editing.id);
+        if(labelFilter === editing.id) labelFilter = '';
+        saveNow();
+        renderSidebar();
+        renderList();
+        renderDetail();
+        closeSheet();
+        toast('Label „' + editing.name + '“ gelöscht');
+      });
+    }
+  }, { fullHeight: true }); // volle Höhe, kein Auto-Fokus (Tastatur erst beim Tippen)
+  void open;
+}
+
+function openLabelPicker(n){
+  const items = [
+    { label: 'Kein Label', sel: !n.label, fn: () => setLabelFor(n, '') }
+  ];
+  for(const l of labels){
+    items.push({
+      icon: '<span class="dot" style="width:20px;height:20px;background:' + l.color + '"></span>',
+      label: l.name,
+      sel: n.label === l.id,
+      fn: () => setLabelFor(n, l.id)
+    });
+  }
+  items.push('-');
+  items.push({
+    icon: I.tag, label: 'Labels verwalten', sub: 'Neu · umbenennen · löschen',
+    fn: () => { closeSheet(); setTimeout(() => openSidebar(), 120); }
+  });
+  openSheet('Label wählen', items);
+}
+function setLabelFor(n, label){
+  n.label = label;
+  n.updatedAt = now();
+  markDirty();
+  renderSidebar();
+  renderList();
+  renderDetail();
+}
+
+/* ---------- Liste ---------- */
+function trashNotes(){
+  return notes.filter(n => n.deletedAt).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+}
+function filteredNotes(){
+  if(trashView) return trashNotes();
+  const q = query.trim().toLowerCase();
+  let list = notes.filter(n =>
+    !n.deletedAt &&
+    (!labelFilter || n.label === labelFilter) &&
+    (!q || n.title.toLowerCase().includes(q) || n.text.toLowerCase().includes(q) ||
+     (n.items||[]).some(i => i.t.toLowerCase().includes(q)))
+  );
+  list.sort((a, b) => {
+    if(a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    if(sortMode === 'title') return a.title.localeCompare(b.title, 'de');
+    const k = sortMode === 'created' ? 'createdAt' : 'updatedAt';
+    return b[k] - a[k];
+  });
+  return list;
+}
+function doneCount(n){ return (n.items || []).filter(i => i.d).length; }
+
+function cardHTML(n){
+  const lbl = getLabel(n.label);
+  const done = doneCount(n);
+  const title = n.title || 'Ohne Titel';
+  let prev = '';
+  const q = query.trim().toLowerCase();
+  if(n.type === 'list'){
+    prev = done + ' von ' + n.items.length + ' erledigt';
+  } else {
+    prev = n.text.replace(/\s+/g, ' ').trim().slice(0, 160);
+  }
+  return '<div class="del-reveal">' + I.trash + '</div>' +
+    '<div class="pin-reveal">' + I.pin + '</div>' +
+    '<div class="c-inner">' +
+      (lbl ? '<div class="c-bar" style="background:' + lbl.color + '"></div>' : '') +
+      '<div class="c-body">' +
+        '<div class="c-title' + (n.title ? '' : ' notitle') + '">' + (q ? hl(title, q) : esc(title)) + '</div>' +
+        (prev ? '<div class="c-prev">' + (q && n.type !== 'list' ? hl(prev, q) : esc(prev)) + '</div>' : '') +
+        '<div class="c-meta">' +
+          '<span class="c-date">' + fmtDate(n.updatedAt) + '</span>' +
+          (n.type === 'list' && n.items.length ?
+            '<span class="c-progress"><span style="width:' + Math.round(done / n.items.length * 100) + '%"></span></span>' : '') +
+          (n.pinned ? '<span class="c-pin">' + I.pin + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderTrash(){
+  const wrap = $('#listWrap');
+  const trash = trashNotes();
+  wrap.innerHTML = '';
+  if(!trash.length){
+    wrap.innerHTML =
+      '<div class="empty"><div class="eico">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>' +
+      '</div><b>Papierkorb ist leer</b>' +
+      '<p>Gelöschte Notizen landen hier und werden nach 30 Tagen automatisch entfernt.</p>' +
+      '<button class="btn" id="trashBack">Zurück zu den Notizen</button></div>';
+    $('#trashBack').addEventListener('click', () => { trashView = false; renderSidebar(); renderList(); });
+    return;
+  }
+  const head = document.createElement('div');
+  head.className = 'trash-head';
+  head.innerHTML = '<b>Papierkorb</b><span class="n">' + trash.length + '</span><span class="sp"></span>' +
+    '<button class="btn sm" id="trashEmpty">Leeren</button>';
+  wrap.appendChild(head);
+  $('#trashEmpty').addEventListener('click', () => {
+    if(!confirm('Papierkorb wirklich leeren? ' + trash.length + ' Notiz(en) werden endgültig gelöscht.')) return;
+    const ids = new Set(trash.map(n => n.id));
+    notes = notes.filter(n => !ids.has(n.id));
+    saveNow();
+    renderSidebar();
+    renderTrash();
+    toast('Papierkorb geleert');
+  });
+  for(const n of trash){
+    const c = document.createElement('div');
+    c.className = 'card trash-card';
+    c.dataset.id = n.id;
+    const inner = document.createElement('div');
+    inner.innerHTML = cardHTML(n);
+    const innerEl = inner.querySelector('.c-inner');
+    const body = innerEl.querySelector('.c-body');
+    body.insertAdjacentHTML('beforeend',
+      '<div class="t-actions">' +
+        '<button class="btn restore">↩ Wiederherstellen</button>' +
+        '<button class="btn del-forever">Endgültig löschen</button>' +
+      '</div>');
+    while(inner.firstElementChild) c.appendChild(inner.firstElementChild);
+    c.querySelector('.restore').addEventListener('click', () => restoreNote(n));
+    c.querySelector('.del-forever').addEventListener('click', () => deleteForever(n));
+    wrap.appendChild(c);
+  }
+}
+function renderList(){
+  const wrap = $('#listWrap');
+  if(trashView){ renderTrash(); return; }
+  const list = filteredNotes();
+  wrap.innerHTML = '';
+
+  if(!notes.length){
+    wrap.innerHTML =
+      '<div class="empty"><div class="eico">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>' +
+      '</div><b>Noch keine Notizen</b>' +
+      '<p>Erstelle deine erste Notiz oder Checkliste – alles bleibt auf diesem Gerät.</p>' +
+      '<button class="btn primary" id="emptyNew">+ Neue Notiz</button></div>';
+    $('#emptyNew').addEventListener('click', newNote);
+    return;
+  }
+  if(!list.length){
+    wrap.innerHTML =
+      '<div class="empty"><div class="eico">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="width:40px;height:40px"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>' +
+      '</div><b>Keine Treffer</b>' +
+      '<p>Nichts passt zu deiner Suche oder dem gewählten Label.</p>' +
+      '<button class="btn" id="emptyReset">Filter zurücksetzen</button></div>';
+    $('#emptyReset').addEventListener('click', () => {
+      $('#search').value = ''; query = '';
+      labelFilter = '';
+      $('#searchClear').style.display = 'none';
+      renderSidebar();
+      renderList();
+    });
+    return;
+  }
+
+  const pinned = list.filter(n => n.pinned);
+  const rest   = list.filter(n => !n.pinned);
+  const section = (arr, title) => {
+    if(!arr.length) return;
+    const h = document.createElement('div');
+    h.className = 'sec-title';
+    h.innerHTML = esc(title) + ' <span class="n">' + arr.length + '</span>';
+    wrap.appendChild(h);
+    for(const n of arr){
+      const c = document.createElement('div');
+      c.className = 'card';
+      c.dataset.id = n.id;
+      const inner = document.createElement('div');
+      inner.innerHTML = cardHTML(n);
+      const innerEl = inner.querySelector('.c-inner');
+      const lbl = getLabel(n.label);
+      if(lbl) innerEl.style.background = 'color-mix(in srgb, ' + lbl.color + ' 7%, var(--panel))';
+      // Reveal-Flächen (Löschen/Pinnen) + Inhalt anhängen
+      while(inner.firstElementChild) c.appendChild(inner.firstElementChild);
+      bindCard(c, n);
+      wrap.appendChild(c);
+    }
+  };
+  section(pinned, 'Angepinnt');
+  // Gruppierung "Heute / Gestern / Älter" (wie Apple Notizen) – außer bei A–Z-Sortierung
+  if(sortMode === 'title'){
+    section(rest, 'Alle Notizen');
+  } else {
+    const dayKey = ts => {
+      const d = new Date(ts), nd = new Date();
+      const d0 = new Date(nd.getFullYear(), nd.getMonth(), nd.getDate()).getTime();
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const diff = Math.round((d0 - dd) / 864e5);
+      return diff === 0 ? 'today' : diff === 1 ? 'yest' : 'old';
+    };
+    const groups = { today: [], yest: [], old: [] };
+    rest.forEach(n => groups[dayKey(n.updatedAt)].push(n));
+    section(groups.today, 'Heute');
+    section(groups.yest, 'Gestern');
+    section(groups.old, 'Älter');
+  }
+}
+
+/* ---------- Karten-Interaktionen: flüssiges Wischen nach links (löschen) & rechts (pinnen) ---------- */
+function bindCard(card, n){
+  const inner = card.querySelector('.c-inner');
+  let sx = 0, sy = 0, off = 0, lastV = 0, lastT = 0, lastX = 0;
+  let dragging = false, longTimer = null, longFired = false, mode = null, springTimer = null;
+
+  const W = () => card.offsetWidth || 420;
+  const thrOff = () => Math.round(W() * 0.5);     // Anschlag bei 50%: ab da greift die Aktion, darunter federt es zurück
+
+  const cancelLong = () => { if(longTimer){ clearTimeout(longTimer); longTimer = null; } };
+  const clearMode = () => {
+    mode = null;
+    card.classList.remove('mode-left', 'mode-right');
+  };
+
+  card.addEventListener('pointerdown', e => {
+    // Ausstehende Feder-Animation abbrechen (sonst würde sie die neue Geste stören)
+    if(springTimer){ clearTimeout(springTimer); springTimer = null; }
+    sx = e.clientX; sy = e.clientY; off = 0;
+    lastX = e.clientX; lastT = performance.now(); lastV = 0;
+    dragging = true; longFired = false; mode = null;
+    inner.style.transition = 'none';
+    card.classList.add('swiping');
+    longTimer = setTimeout(() => {
+      longTimer = null;
+      if(dragging && Math.abs(e.clientX - sx) < 8 && Math.abs(e.clientY - sy) < 8){
+        longFired = true;
+        dragging = false;                       // Geste ist beendet (Menü offen)
+        card.classList.remove('swiping');
+        clearMode();
+        vibrate(12);
+        openCardMenu(n);
+        swallowNextClick();                     // synthetischen Klick beim Loslassen schlucken
+      }
+    }, 480);
+  });
+  card.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if(Math.abs(dx) > 10 || Math.abs(dy) > 10) cancelLong();
+    if(Math.abs(dx) < Math.abs(dy)) return;     // vertikal: natives Scrollen
+    // Richtung beim ersten Ausschlag festlegen (danach fixiert)
+    if(mode === null){
+      if(dx < -8) mode = 'left';
+      else if(dx > 8) mode = 'right';
+      else return;
+      card.classList.add(mode === 'left' ? 'mode-left' : 'mode-right');
+    }
+    const t = performance.now();
+    const dt = Math.max(1, t - lastT);
+    lastV = (e.clientX - lastX) / dt;
+    lastX = e.clientX; lastT = t;
+    // Harte Anschläge bei 50% (kein Gummiband): links = löschen, rechts = anpinnen
+    const lim = thrOff();
+    let o;
+    if(mode === 'left') o = Math.max(dx, -lim);
+    else o = Math.min(dx, lim);
+    off = o;
+    inner.style.transform = 'translateX(' + o + 'px)';
+    card.style.setProperty('--sx', o + 'px');
+  });
+  const up = e => {
+    if(!dragging) return;
+    dragging = false;
+    cancelLong();
+    card.classList.remove('swiping');
+    if(longFired){ clearMode(); return; }
+    if(mode === null){
+      // Tippen (keine Bewegung) = Notiz öffnen
+      if(Math.abs(e.clientX - sx) < 10 && Math.abs(e.clientY - sy) < 10) openNote(n.id);
+      clearMode();
+      return;
+    }
+
+    if(mode === 'left'){
+      // Fling: schneller Wisch, aber physikalisch plausibel (obere Grenze gegen Ausreißer)
+      const fling = off < -40 && lastV < -0.6 && lastV > -5;
+      if(off <= -thrOff() || fling){
+        hideHint();
+        deleteNote(n, card);
+        return;
+      }
+    } else { // right → anpinnen
+      const fling = off > 40 && lastV > 0.6 && lastV < 5;
+      if(off >= thrOff() || fling){
+        hideHint();
+        togglePinState(n);
+        vibrate(10);
+        toast(n.pinned ? '📌 Angepinnt' : 'Pin gelöst');
+        animateCardPin(n.id);
+        return;
+      }
+    }
+    // Zurückfedern (weich, in einem Zug)
+    inner.style.transition = 'transform .32s cubic-bezier(.32,.72,0,1)';
+    inner.style.transform = 'translateX(0)';
+    // Hintergrund (rot/indigo) erst NACH der Feder-Animation zurücksetzen –
+    // sonst wird z. B. die violette Pin-Fläche beim Abbruch kurz rot (Bug).
+    springTimer = setTimeout(() => {
+      inner.style.transition = '';
+      clearMode();
+      springTimer = null;
+    }, 360);
+    // Tippen = Notiz öffnen
+    if(Math.abs(off) < 8 && Math.abs(e.clientX - sx) < 10 && Math.abs(e.clientY - sy) < 10){
+      openNote(n.id);
+    }
+  };
+  card.addEventListener('pointerup', up);
+  card.addEventListener('pointercancel', up);
+  card.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+/* Wischen nach rechts = Notiz anpinnen (mit Feedback + Animation wie beim Löschen) */
+function togglePinState(n){
+  n.pinned = !n.pinned;
+  n.updatedAt = now();
+  markDirty();
+}
+/* Anpinnen: die Karte fliegt als GANZE Karte zu ihrer Zielposition
+   (oben in der "Angepinnt"-Sektion) und KOMMT dort an – ohne Ausfaden.
+   Technik: FLIP – alte Position merken, neu rendern, dann per Transform
+   alle Karten von der alten in die neue Position animieren. */
+function animateCardPin(id){
+  const listWrap = $('#listWrap');
+  const oldRects = {};
+  listWrap.querySelectorAll('.card').forEach(c => {
+    try { oldRects[c.dataset.id] = c.getBoundingClientRect(); } catch(e){}
+  });
+
+  renderList(); // Notiz ist bereits als angepinnt gespeichert → erscheint oben
+
+  const anims = [];
+  listWrap.querySelectorAll('.card').forEach(c => {
+    const or = oldRects[c.dataset.id];
+    if(!or) return;
+    let nr;
+    try { nr = c.getBoundingClientRect(); } catch(e){ return; }
+    const dx = or.left - nr.left, dy = or.top - nr.top;
+    if(Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    c.style.transition = 'none';
+    c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    anims.push({ c, dx, dy });
+  });
+  if(!anims.length) return true;
+  void listWrap.offsetHeight; // Reflow erzwingen
+  anims.forEach(a => {
+    a.c.style.transition = 'transform .5s cubic-bezier(.22,1,.36,1)';
+    a.c.style.transform = '';
+  });
+  setTimeout(() => {
+    anims.forEach(a => { a.c.style.transition = ''; a.c.style.transform = ''; });
+  }, 550);
+  return true;
+}
+
+/* Nach einem Langdruck den automatischen "Klick" beim Finger-Loslassen schlucken,
+   damit er nicht versehentlich einen Menüpunkt auslöst (echte Geräte). */
+let swallowHandler = null, swallowUntil = 0;
+function swallowNextClick(){
+  const until = Date.now() + 500;
+  swallowUntil = until;
+  if(swallowHandler) return;
+  // NUR den Phantom-Klick auf der KARTE schlucken (der beim Loslassen nach einem
+  // Langdruck automatisch feuert) – Klicks aufs gerade geöffnete Menü bleiben frei.
+  swallowHandler = e => {
+    if(e.isTrusted === false) return; // Tests/Skripte nicht beeinflussen
+    if(!(e.target && e.target.closest && e.target.closest('.card'))) return;
+    if(Date.now() < swallowUntil){
+      e.stopPropagation();
+      e.preventDefault();
+      document.removeEventListener('click', swallowHandler, true);
+      swallowHandler = null;
+    }
+  };
+  document.addEventListener('click', swallowHandler, true);
+  setTimeout(() => {
+    if(swallowHandler){
+      document.removeEventListener('click', swallowHandler, true);
+      swallowHandler = null;
+    }
+  }, 600);
+}
+
+function openCardMenu(n){
+  const lbl = getLabel(n.label);
+  openSheet(n.title || 'Ohne Titel', [
+    { icon: I.edit, label:'Öffnen', fn: () => openNote(n.id) },
+    { icon: n.pinned ? I.pinOff : I.pin, label: n.pinned ? 'Anheften lösen' : 'Anheften', fn: () => togglePin(n) },
+      { icon: '<span class="dot" style="width:20px;height:20px;background:' + (lbl ? lbl.color : 'var(--border2)') + '"></span>', label: 'Label: ' + (lbl ? lbl.name : 'Keines'), sub:'Eigenes Label zuweisen', fn: () => openLabelPicker(n), noClose: true },
+      { icon: I.dl, label:'Exportieren', sub:'TXT · Markdown · HTML · JSON', fn: () => openExportSheet(n), noClose: true },
+    '-',
+    { icon: I.trash, label:'Löschen', danger:true, fn: () => deleteNote(n) }
+  ]);
+}
+
+/* ---------- Aktionen ---------- */
+function currentNote(){ return notes.find(n => n.id === currentId) || null; }
+
+function newNote(){
+  saveNow();
+  const n = {
+    id: uid(), title: '', text: '', type: 'text', items: [],
+    label: '', pinned: false, createdAt: now(), updatedAt: now()
+  };
+  n.sessionNew = true; // in dieser Sitzung erstellt → Drucken bleibt ausgeblendet
+  notes.unshift(n);
+  currentId = n.id;
+  renderList();
+  openNote(n.id, true);
+}
+function openNote(id, fresh){
+  hideHint();
+  saveNow();
+  currentId = id;
+  const dv = $('#detailView');
+  // Inline-Reste aus Gesten/abgebrochenen Animationen entfernen
+  dv.style.transform = '';
+  dv.style.transition = '';
+  // Wurde gerade geschlossen (Slide-Out noch am Laufen), Animation sauber neu starten –
+  // sonst bleibt die Ansicht sonst halb-geshiftet stehen (ganzer Bildschirm "nach rechts")
+  if(dv.dataset.closed === '1'){
+    dv.dataset.closed = '';
+    dv.classList.remove('open');
+    void dv.offsetHeight; // Reflow erzwingen → Slide-In startet garantiert von rechts
+  }
+  renderList();
+  renderDetail();
+  dv.classList.add('open');
+  dv.setAttribute('aria-hidden', 'false');
+  pushOverlayState();
+  if(fresh){
+    setTimeout(() => $('#noteTitle').focus(), 380);
+  } else {
+    setTimeout(() => { try { dv.querySelector('.d-scroll').scrollTop = 0; } catch(e){} }, 60);
+  }
+}
+function closeDetail(){
+  saveNow();
+  const dv = $('#detailView');
+  dv.style.transform = '';
+  dv.style.transition = '';
+  dv.dataset.closed = '1'; // openNote kann die Slide-Animation sauber neu starten
+  dv.classList.remove('open');
+  dv.setAttribute('aria-hidden', 'true');
+  currentId = null;
+  // Tastatur sauber schließen (verhindert Viewport-Ruckeln beim schnellen Zurück)
+  const ae = document.activeElement;
+  if(ae && dv.contains(ae) && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) ae.blur();
+  renderList();
+  setTimeout(() => { if(!currentId) renderDetail(); }, 330);
+}
+function togglePin(n){
+  n.pinned = !n.pinned;
+  n.updatedAt = now();
+  markDirty();
+  renderList();
+  renderDetail();
+}
+
+/* Löschen: eine durchgehende Animation (Gleiten + Kollaps starten gleichzeitig) */
+function animateCardDelete(id){
+  const card = document.querySelector('.card[data-id="' + id + '"]');
+  if(!card) return false;
+  const inner = card.querySelector('.c-inner');
+  if(inner) inner.style.transition = '';          // Reste vom Ziehen entfernen (kein Ruckeln)
+  card.style.setProperty('--ch', card.offsetHeight + 'px');
+  card.classList.add('swiping', 'removing');
+  setTimeout(() => { card.remove(); renderList(); }, 650);
+  return true;
+}
+function deleteNote(n, cardEl){
+  if(deletePending && deletePending.id !== n.id){
+    clearTimeout(deletePending.timer);
+    deletePending = null;
+  }
+  n.deletedAt = now(); // → Papierkorb (statt sofort zu entfernen)
+  saveNow();
+  purgeTrash();
+  const wasOpen = currentId === n.id && $('#detailView').classList.contains('open');
+
+  if(wasOpen) closeDetail();
+  // Animation starten; ist die Karte gerade nicht in der Liste (z. B. durch
+  // Suche/Filter ausgeblendet), Liste sofort neu rendern, damit kein Geist bleibt
+  if(!animateCardDelete(n.id) && !wasOpen) renderList();
+  renderSidebar(); // Papierkorb-Zähler aktualisieren
+
+  vibrate(18);
+
+  deletePending = { id: n.id };
+  const timer = setTimeout(() => {
+    if(deletePending && deletePending.id === n.id) deletePending = null;
+  }, 5000);
+  deletePending.timer = timer;
+
+  toast('Notiz in den Papierkorb gelegt', 'Rückgängig', () => {
+    clearTimeout(timer);
+    if(deletePending && deletePending.id === n.id) deletePending = null;
+    n.deletedAt = null; // wiederherstellen
+    renderList();
+    renderSidebar();
+    if(wasOpen){
+      currentId = n.id;
+      renderDetail();
+      $('#detailView').classList.add('open');
+      $('#detailView').setAttribute('aria-hidden', 'false');
+    }
+  });
+}
+/* Endgültig löschen (nur aus dem Papierkorb) */
+function deleteForever(n){
+  notes = notes.filter(x => x.id !== n.id);
+  saveNow(); // direkt speichern (purgeTrash sieht die Änderung sonst nicht)
+  if(!trashNotes().length) trashView = false; // Papierkorb leer → zurück zur Liste
+  renderList();
+  renderSidebar();
+  toast('Endgültig gelöscht');
+}
+function restoreNote(n){
+  n.deletedAt = null;
+  n.updatedAt = now();
+  if(!trashNotes().length) trashView = false; // Papierkorb leer → zurück zur Liste
+  saveNow();
+  renderList();
+  renderSidebar();
+  toast('Notiz wiederhergestellt');
+}
+/* Alte Papierkorb-Einträge (>30 Tage) automatisch entfernen */
+function purgeTrash(){
+  const cut = now() - 30 * 24 * 3600 * 1000;
+  const before = notes.length;
+  notes = notes.filter(n => !n.deletedAt || n.deletedAt > cut);
+  if(notes.length !== before) saveNow();
+}
+
+/* ---------- Detail rendern ---------- */
+function renderDetail(){
+  const n = currentNote();
+  if(!n){
+    $('#noteTitle').value = '';
+    $('#noteText').value = '';
+    $('#noteText').hidden = false;
+    $('#listEditor').hidden = true;
+    return;
+  }
+  switching = true;
+  $('#noteTitle').value = n.title;
+  switching = false;
+  // Datum: nur "Bearbeitet" anzeigen, wenn sich Erstellt- und Bearbeitet-Datum unterscheiden
+  const dC = fmtDate(n.createdAt), dU = fmtDate(n.updatedAt);
+  $('#dates').textContent = dC === dU
+    ? 'Erstellt ' + dC
+    : 'Erstellt ' + dC + ' · Bearbeitet ' + dU;
+  $('#pinBtn').innerHTML = n.pinned ? I.pin : I.pinOff;
+  $('#pinBtn').classList.toggle('on', n.pinned);
+  const dPinIco = $('#dPin .ico');
+  dPinIco.innerHTML = n.pinned ? I.pin : I.pinOff;
+  $('#dPin').classList.toggle('on', n.pinned);
+
+  // Label-Button
+  const lbl = getLabel(n.label);
+  $('#labelBtnDot').style.background = lbl ? lbl.color : 'var(--border2)';
+  $('#labelBtnText').textContent = lbl ? lbl.name : 'Kein Label';
+
+  // Such-Treffer-Chip
+  const chip = $('#hitsChip');
+  if(chip){
+    const q2 = query.trim();
+    if(q2){
+      const hits = countMatches(n.title, q2) + countMatches(n.text, q2) +
+        (n.items || []).reduce((s, i) => s + countMatches(i.t, q2), 0);
+      chip.textContent = '🔍 ' + hits + (hits === 1 ? ' Treffer' : ' Treffer');
+      chip.hidden = hits === 0;
+    } else {
+      chip.hidden = true;
+    }
+  }
+
+  // Typ-Segment
+  $$('#typeSeg button').forEach(b => b.classList.toggle('on', b.dataset.type === n.type));
+  const isList = n.type === 'list';
+  $('#noteText').hidden = isList;
+  $('#listEditor').hidden = !isList;
+  if(!isList){
+    $('#noteText').value = n.text;
+    autosizeText();
+  } else {
+    renderItems();
+  }
+}
+function autosizeText(){
+  const ta = $('#noteText');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight + 2, window.innerHeight * 0.6) + 'px';
+}
+
+/* ---------- Checkliste ---------- */
+function renderItems(){
+  const n = currentNote();
+  if(!n || n.type !== 'list') return;
+  const wrap = $('#clItems');
+  wrap.innerHTML = '';
+  for(const it of n.items){
+    const row = document.createElement('div');
+    row.className = 'cl-row' + (it.d ? ' done' : '');
+    row.dataset.id = it.id;
+    row.innerHTML =
+      '<button class="cl-check" aria-label="Abhaken">' + I.check + '</button>' +
+      '<input class="cl-text" value="' + esc(it.t) + '" maxlength="200">' +
+      '<button class="cl-del" aria-label="Element löschen">' + I.trash + '</button>';
+    row.querySelector('.cl-check').addEventListener('click', () => toggleItem(n, it.id));
+    const ti = row.querySelector('.cl-text');
+    ti.addEventListener('input', () => {
+      it.t = ti.value;
+      n.updatedAt = now();
+      markDirty();
+    });
+    ti.addEventListener('focus', () => row.classList.add('focused'));
+    ti.addEventListener('blur', () => row.classList.remove('focused'));
+    ti.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); $('#clNew').focus(); }
+    });
+    row.querySelector('.cl-del').addEventListener('click', () => {
+      n.items = n.items.filter(x => x.id !== it.id);
+      n.updatedAt = now();
+      markDirty();
+      renderItems();
+    });
+    wrap.appendChild(row);
+  }
+  const done = doneCount(n), total = n.items.length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  $('#clPct').textContent = pct + '%';
+  $('#clStats').textContent = done + ' von ' + total + ' erledigt';
+  const ring = $('.cl-ring');
+  ring.style.setProperty('--p', pct);
+  $('#clToggleAll').textContent = done === total ? 'Alle abwählen' : 'Alle abhaken';
+  $('#clToggleAll').style.display = total ? '' : 'none';
+}
+function toggleItem(n, id){
+  const it = n.items.find(x => x.id === id);
+  if(!it) return;
+  it.d = !it.d;
+  n.updatedAt = now();
+  markDirty();
+  vibrate(8);
+  renderItems();
+}
+function addItem(n, text){
+  text = String(text || '').trim();
+  if(!text) return false;
+  n.items.push({ id: uid(), t: text, d: false });
+  n.updatedAt = now();
+  markDirty();
+  renderItems();
+  return true;
+}
+
+/* ---------- Export ---------- */
+function itemsToMD(n){ return n.items.map(i => '- [' + (i.d ? 'x' : ' ') + '] ' + i.t).join('\n'); }
+function itemsToTXT(n){ return n.items.map(i => '[' + (i.d ? 'x' : ' ') + '] ' + i.t).join('\n'); }
+function itemsToHTML(n){
+  return '<ul>' + n.items.map(i => '<li' + (i.d ? ' class="done"' : '') + '>' + esc(i.t) + '</li>').join('\n') + '</ul>';
+}
+function exportTXT(n){
+  const body = n.type === 'list' ? itemsToTXT(n) : n.text;
+  download(slugify(n.title) + '.txt', (n.title || 'Ohne Titel') + '\n\n' + body + '\n');
+}
+function exportMD(n){
+  const body = n.type === 'list' ? itemsToMD(n) : n.text;
+  download(slugify(n.title) + '.md', '# ' + (n.title || 'Ohne Titel') + '\n\n' + body + '\n');
+}
+function exportHTML(n){
+  const lbl = getLabel(n.label);
+  const content = n.type === 'list' ? itemsToHTML(n) : n.text.split('\n').map(l => l.trim() ? '<p>' + linkify(l) + '</p>' : '').join('\n');
+  const doc = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+    '<title>' + esc(n.title || 'Ohne Titel') + '</title>\n<style>\n' +
+    'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1f2937;line-height:1.7;max-width:680px;margin:0 auto;padding:48px 24px}\n' +
+    'h1{font-size:28px;margin:0 0 6px;letter-spacing:-.02em}\n' +
+    (lbl ? '.label{display:inline-block;font-size:11px;font-weight:700;color:' + lbl.color + ';border:1px solid ' + lbl.color + ';border-radius:999px;padding:3px 10px;margin-bottom:18px}\n' : '') +
+    '.meta{color:#6b7280;font-size:13px;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid #e5e7eb}\n' +
+    'p{margin:0 0 14px}\nul{list-style:none;padding:0}\nli{padding:6px 0 6px 30px;position:relative}\n' +
+    'li::before{content:"☐";position:absolute;left:2px}\nli.done::before{content:"☑";color:#4f46e5}\nli.done{color:#6b7280;text-decoration:line-through}\n' +
+    'a{color:#4338ca}\nfooter{color:#9ca3af;font-size:12px;margin-top:40px}\n' +
+    '</style>\n</head>\n<body>\n' +
+    '<h1>' + esc(n.title || 'Ohne Titel') + '</h1>\n' +
+    (lbl ? '<span class="label">' + esc(lbl.name) + '</span>\n' : '') +
+    '<div class="meta">Exportiert am ' + new Date().toLocaleString('de-DE') + '</div>\n' +
+    (content || '<p><em>Leere Notiz</em></p>') + '\n' +
+    '<footer>Mit Noteises erstellt – lokal &amp; privat.</footer>\n' +
+    '</body>\n</html>';
+  download(slugify(n.title) + '.html', doc, 'text/html;charset=utf-8');
+}
+function exportJSON(n){
+  download(slugify(n.title) + '.json',
+    JSON.stringify({ app:'noteises', version:3, exported:new Date().toISOString(), notes:[n] }, null, 2),
+    'application/json;charset=utf-8');
+}
+function copyText(t, label){
+  let ok = false;
+  const done = () => toast(ok ? '✓ ' + label + ' kopiert' : '⚠ Kopieren nicht möglich');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(() => { ok = true; done(); }).catch(() => done());
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { ok = document.execCommand('copy'); } catch(e){}
+    ta.remove();
+    done();
+  }
+}
+function shareNote(n){
+  const body = n.type === 'list' ? itemsToTXT(n) : n.text;
+  const text = (n.title || 'Ohne Titel') + '\n\n' + body;
+  if(navigator.share){
+    navigator.share({ title: n.title || 'Noteises', text }).catch(() => {});
+  } else {
+    copyText(text, 'Notiz');
+  }
+}
+function openExportSheet(n){
+  openSheet('Exportieren', [
+    { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>', label:'Teilen…', sub:'An andere Apps senden', fn: () => shareNote(n) },
+    { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>', label:'Text (.txt)', sub:'Reiner Text', fn: () => exportTXT(n) },
+    { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M8 19h8"/></svg>', label:'Markdown (.md)', sub:'Checkliste wird zu - [x] Punkten', fn: () => exportMD(n) },
+    { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>', label:'HTML-Dokument', sub:'Schön formatiert, URLs verlinkt', fn: () => exportHTML(n) },
+    { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>', label:'JSON', sub:'Wieder importierbar', fn: () => exportJSON(n) }
+  ]);
+}
+function backupAll(){
+  download('noteises-sicherung-' + new Date().toISOString().slice(0, 10) + '.json',
+    JSON.stringify({ app:'noteises', version:3, exported:new Date().toISOString(), notes, labels }, null, 2),
+    'application/json;charset=utf-8');
+  toast('✓ Sicherung mit ' + notes.length + ' Notizen erstellt');
+}
+/* ---------- Import ---------- */
+function handleImport(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const data = JSON.parse(fr.result);
+      if(!data || !['notizwerk','noteises'].includes(data.app) || !Array.isArray(data.notes)){
+        toast('⚠ Keine gültige Noteises-Sicherung');
+        return;
+      }
+      const oldCount = notes.length;
+      if(!confirm('Sicherung importieren?\n\n' + data.notes.length + ' Notiz(en) werden geladen und ersetzen die vorhandenen ' + oldCount + ' Notiz(en).')) return;
+      if(Array.isArray(data.labels) && data.labels.length) labels = data.labels.map(normalizeLabel);
+      notes = data.notes.map(normalizeNote);
+      if(currentId) closeDetail();
+      currentId = notes.length ? notes[0].id : null;
+      saveNow();
+      renderSidebar();
+      renderList();
+      renderDetail();
+      toast('✓ ' + notes.length + ' Notizen importiert');
+    } catch(e){
+      toast('⚠ Datei konnte nicht gelesen werden');
+    }
+  };
+  fr.onerror = () => toast('⚠ Datei konnte nicht gelesen werden');
+  fr.readAsText(file);
+}
+
+/* ---------- Sortierung ---------- */
+function openSortSheet(){
+  const opts = [
+    { key:'updated', label:'Zuletzt bearbeitet' },
+    { key:'created', label:'Zuletzt erstellt' },
+    { key:'title',   label:'Titel A–Z' }
+  ];
+  openSheet('Sortierung', opts.map(o => ({
+    label: o.label,
+    sel: sortMode === o.key,
+    fn: () => { sortMode = o.key; renderSidebar(); renderList(); }
+  })));
+}
+
+/* ---------- Events ---------- */
+function bindEvents(){
+  $('#fab').addEventListener('click', newNote);
+  $('#backBtn').addEventListener('click', closeDetail);
+  $('#menuBtn').addEventListener('click', () => { renderSidebar(); openSidebar(); });
+  $('#sideClose').addEventListener('click', closeSidebar);
+  $('#labelBtn').addEventListener('click', () => { const n = currentNote(); if(n) openLabelPicker(n); });
+  $('#addLabelBtn').addEventListener('click', () => openLabelForm(null));
+  $('#sideTrash').addEventListener('click', () => {
+    trashView = !trashView;
+    if(trashView){ labelFilter = ''; $('#search').value = ''; query = ''; $('#searchClear').style.display = 'none'; }
+    renderSidebar();
+    renderList();
+    closeSidebar();
+  });
+
+  // Seitenleisten-Aktionen
+  $('#sideTheme').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark', true);
+    renderSidebar();
+  });
+  $('#sideSort').addEventListener('click', openSortSheet);
+  $('#sideBackup').addEventListener('click', () => { closeSidebar(); backupAll(); });
+  $('#sideImport').addEventListener('click', () => { closeSidebar(); $('#importInput').click(); });
+  $('#sideAbout').addEventListener('click', () => {
+    closeSidebar();
+    toast('Noteises v3 · Notizen & Checklisten · läuft komplett offline auf deinem Gerät');
+  });
+  $('#sideInstall').addEventListener('click', async () => {
+    if(!deferredPrompt){ toast('Installation ist hier gerade nicht verfügbar'); return; }
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice.catch(() => ({ outcome:'dismissed' }));
+    if(choice.outcome === 'accepted') toast('✓ Noteises wird installiert');
+    deferredPrompt = null;
+    $('#sideInstall').hidden = true;
+  });
+
+  // Suche
+  const search = $('#search');
+  search.addEventListener('input', () => {
+    if(trashView) return;
+    query = search.value;
+    $('#searchClear').style.display = query ? 'flex' : 'none';
+    renderSidebar();
+    renderList();
+  });
+  search.addEventListener('search', () => {
+    query = search.value;
+    $('#searchClear').style.display = query ? 'flex' : 'none';
+    renderSidebar();
+    renderList();
+  });
+  $('#searchClear').addEventListener('click', () => {
+    search.value = ''; query = '';
+    $('#searchClear').style.display = 'none';
+    renderSidebar();
+    renderList();
+    search.focus();
+  });
+
+  // Titel
+  $('#noteTitle').addEventListener('input', () => {
+    const n = currentNote(); if(!n || switching) return;
+    n.title = $('#noteTitle').value;
+    n.updatedAt = now();
+    markDirty();
+      scheduleListRefresh();
+  });
+  $('#noteTitle').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); if(currentNote() && currentNote().type === 'list') $('#clNew').focus(); else $('#noteText').focus(); }
+  });
+
+  // Text
+  $('#noteText').addEventListener('input', () => {
+    const n = currentNote(); if(!n || switching) return;
+    n.text = $('#noteText').value;
+    n.updatedAt = now();
+    markDirty();
+    autosizeText();
+      scheduleListRefresh();
+  });
+
+  // Typ umschalten
+  $('#typeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-type]');
+    if(!b) return;
+    const n = currentNote(); if(!n) return;
+    n.type = b.dataset.type;
+    n.updatedAt = now();
+    markDirty();
+    renderDetail();
+    renderList();
+    if(n.type === 'list') setTimeout(() => $('#clNew').focus(), 60);
+  });
+
+  // Pin & Aktionen unten
+  $('#pinBtn').addEventListener('click', () => { const n = currentNote(); if(n) togglePin(n); });
+  $('#dPin').addEventListener('click', () => { const n = currentNote(); if(n) togglePin(n); });
+  $('#dExport').addEventListener('click', () => { const n = currentNote(); if(n) openExportSheet(n); });
+  $('#dDelete').addEventListener('click', () => { const n = currentNote(); if(n) deleteNote(n); });
+
+  // Checkliste
+  const clNew = $('#clNew');
+  const addFromInput = () => {
+    const n = currentNote(); if(!n) return;
+    if(addItem(n, clNew.value)){ clNew.value = ''; }
+  };
+  $('#clAddBtn').addEventListener('click', addFromInput);
+  clNew.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addFromInput(); }
+  });
+  $('#clToggleAll').addEventListener('click', () => {
+    const n = currentNote(); if(!n || !n.items.length) return;
+    const allDone = doneCount(n) === n.items.length;
+    n.items.forEach(i => { i.d = !allDone; });
+    n.updatedAt = now();
+    markDirty();
+    vibrate(8);
+    renderItems();
+  });
+
+  // Import
+  $('#importInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if(f) handleImport(f);
+    e.target.value = '';
+  });
+
+  // Tastatur
+  document.addEventListener('keydown', e => {
+    const mod = e.ctrlKey || e.metaKey;
+    if(mod && e.key.toLowerCase() === 'n'){ e.preventDefault(); newNote(); }
+    else if(mod && e.key.toLowerCase() === 'f'){ e.preventDefault(); $('#search').focus(); $('#search').select(); }
+    else if(mod && e.key.toLowerCase() === 's'){ e.preventDefault(); saveNow(); }
+    else if(e.key === 'Escape'){
+      if($('#sheet').classList.contains('show')) closeSheet();
+      else if($('#sidebar').classList.contains('open')) closeSidebar();
+      else if($('#detailView').classList.contains('open')) closeDetail();
+    }
+  });
+
+  window.addEventListener('beforeunload', saveNow);
+}
+
+let listRefreshTimer = null;
+function scheduleListRefresh(){
+  if(listRefreshTimer) clearTimeout(listRefreshTimer);
+  listRefreshTimer = setTimeout(() => { listRefreshTimer = null; renderList(); }, 300);
+}
+
+/* ---------- Tastatur: Felder immer sichtbar halten ---------- */
+let fullH = null; // volle Höhe ohne Tastatur (einmal ermittelt, nie geschrumpft)
+let VV = null;    // visualViewport (global, für Einfrieren der Label-Sheets)
+
+function syncKeyboard(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  if(fullH === null || vv.height >= fullH - 1){
+    fullH = Math.max(window.innerHeight || 0, vv.height);
+  }
+  const kb = Math.max(0, fullH - vv.height);
+  document.documentElement.style.setProperty('--kb', kb + 'px');
+  // FAB bei offener Tastatur ausblenden (wie bei nativen Apps)
+  $('#fab').classList.toggle('hidden', kb > 0);
+
+  // Sheet-Höhe an den sichtbaren Bereich koppeln – AUSSER bei Eingabe-Sheets
+  // (Label-Formular): die haben fest 100% Höhe & oben bündig, damit sich nichts
+  // bewegt, wenn die Tastatur auf- oder zufährt.
+  const sheet = $('#sheet');
+  if(!sheet.classList.contains('sheet-input')){
+    const visible = vv.height || fullH;
+    sheet.style.maxHeight = Math.round(visible * 0.96) + 'px';
+  }
+
+  const el = document.activeElement;
+  if(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')){
+    clearTimeout(syncKeyboard._t);
+    syncKeyboard._t = setTimeout(() => {
+      if(typeof el.scrollIntoView === 'function'){
+        try { el.scrollIntoView({ block:'nearest' }); } catch(e){ el.scrollIntoView(); }
+      }
+    }, 80);
+  }
+}
+
+function initKeyboard(){
+  VV = window.visualViewport;
+  const vv = VV;
+  if(!vv) return;
+  vv.addEventListener('resize', syncKeyboard);
+  vv.addEventListener('scroll', syncKeyboard);
+  window.addEventListener('resize', syncKeyboard);
+  syncKeyboard();
+  // Bei Fokus-Wechsel sofort ins Bild scrollen
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')){
+      setTimeout(() => {
+        if(typeof el.scrollIntoView === 'function'){
+          try { el.scrollIntoView({ block:'nearest' }); } catch(e){ el.scrollIntoView(); }
+        }
+      }, 120);
+    }
+  }, true);
+}
+
+/* ---------- Echte App-Navigation: Android-Back, Edge-Swipe, Zurück-Swipe ---------- */
+function pushOverlayState(){
+  try { history.pushState({ ov: 1 }, ''); } catch(e){}
+}
+function initBackHandler(){
+  window.addEventListener('popstate', () => {
+    // Android-Zurück-Geste: schließt immer die oberste Ebene
+    if($('#sheet').classList.contains('show')){ closeSheet(); return; }
+    if($('#sidebar').classList.contains('open')){ closeSidebar(); return; }
+    if($('#detailView').classList.contains('open')){ closeDetail(); }
+  });
+}
+/* Seitenleiste per Edge-Swipe vom linken Rand öffnen (Gmail-Stil) */
+function initEdgeGestures(){
+  const app = $('#app');
+  let g = null;
+  app.addEventListener('pointerdown', e => {
+    if($('#detailView').classList.contains('open')) return;
+    if($('#sidebar').classList.contains('open') || $('#sheet').classList.contains('show')) return;
+    if(e.target.closest && e.target.closest('.card,button,input,textarea,select')) return;
+    if(e.clientX > 30) return; // nur linker Rand
+    g = { x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 };
+  });
+  // Verwaiste Gesten (Finger außerhalb losgelassen) nie hängen lassen
+  document.addEventListener('pointerup', () => { g = null; });
+  document.addEventListener('pointercancel', () => { g = null; });
+  app.addEventListener('pointermove', e => {
+    if(!g) return;
+    g.dx = e.clientX - g.x0;
+    g.dy = e.clientY - g.y0;
+  });
+  const end = () => {
+    if(!g) return;
+    const d = g; g = null;
+    if(d.dx > 80 && Math.abs(d.dx) > Math.abs(d.dy) * 1.4) openSidebar();
+  };
+  app.addEventListener('pointerup', end);
+  app.addEventListener('pointercancel', end);
+}
+/* Zurück-Swipe im Editor (iOS-Feeling): am linken Rand nach rechts ziehen */
+function initEditorBackSwipe(){
+  const dv = $('#detailView');
+  let g = null;
+  const reset = () => {
+    g = null;
+    if(dv.style.transform) dv.style.transform = '';
+    if(dv.style.transition) dv.style.transition = '';
+  };
+  dv.addEventListener('pointerdown', e => {
+    if(!dv.classList.contains('open')) return;
+    if(e.target.closest && e.target.closest('textarea,input,select,button')) return;
+    if(e.clientX > 34) return;
+    g = { x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 };
+    try { dv.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  dv.addEventListener('pointermove', e => {
+    if(!g) return;
+    g.dx = e.clientX - g.x0;
+    g.dy = e.clientY - g.y0;
+    if(g.dx > 0 && Math.abs(g.dx) > Math.abs(g.dy)){
+      dv.style.transition = 'none';
+      dv.style.transform = 'translateX(' + Math.min(g.dx, 110) + 'px)';
+    }
+  });
+  const end = () => {
+    if(!g){ reset(); return; }
+    const d = g; g = null;
+    dv.style.transition = '';
+    dv.style.transform = '';
+    if(d.dx > 90 && Math.abs(d.dx) > Math.abs(d.dy) * 1.4) closeDetail();
+  };
+  dv.addEventListener('pointerup', end);
+  dv.addEventListener('pointercancel', end);
+  dv.addEventListener('lostpointercapture', end);
+  // Sicherheitsnetz: Egal wo der Finger losgelassen wird – am #detailView darf NIE
+  // eine Transform hängen bleiben (Bug: "ganzer Bildschirm steht nach rechts").
+  document.addEventListener('pointerup', () => { if(dv.style.transform) dv.style.transform = ''; });
+  document.addEventListener('pointercancel', () => { if(dv.style.transform) dv.style.transform = ''; });
+}
+
+/* ---------- App-Feeling: Splash, Hint, Pull-to-Refresh, Ripple ---------- */
+function initSplash(){
+  const sp = $('#splash');
+  if(!sp) return;
+  setTimeout(() => sp.classList.add('hide'), 750);
+  setTimeout(() => sp.remove(), 1300);
+}
+
+function hideHint(){
+  const h = $('#hintTip');
+  if(h) h.hidden = true;
+  try { localStorage.setItem('noteises-hint-v1', '1'); } catch(e){}
+}
+function initHint(){
+  let done = false;
+  try { done = !!localStorage.getItem('noteises-hint-v1'); } catch(e){}
+  if(done) return;
+  const h = $('#hintTip');
+  if(h) h.hidden = false;
+  setTimeout(hideHint, 9000);
+}
+
+function initPullToRefresh(){
+  const list = $('#listView'), ptr = $('#ptr');
+  if(!list || !ptr) return;
+  let pulling = false, startY = 0, pull = 0;
+  list.addEventListener('pointerdown', e => {
+    if(list.scrollTop > 0) return;
+    if(e.target.closest && e.target.closest('.card')) return;
+    pulling = true; startY = e.clientY; pull = 0;
+    try { list.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  list.addEventListener('pointermove', e => {
+    if(!pulling) return;
+    const dy = e.clientY - startY;
+    if(dy <= 0){ ptr.style.height = '0px'; pull = 0; return; }
+    pull = Math.min(dy * 0.5, 90);
+    ptr.style.height = pull + 'px';
+    ptr.querySelector('.ptr-spin').style.transform = 'rotate(' + (pull * 4) + 'deg)';
+  });
+  const end = () => {
+    if(!pulling) return;
+    pulling = false;
+    if(pull >= 70){
+      ptr.classList.add('active');
+      ptr.style.height = '56px';
+      vibrate(10);
+      setTimeout(() => {
+        ptr.classList.remove('active');
+        ptr.style.height = '0px';
+        renderList();
+        renderSidebar();
+        saveNow();
+      }, 650);
+    } else {
+      ptr.style.height = '0px';
+    }
+    pull = 0;
+  };
+  list.addEventListener('pointerup', end);
+  list.addEventListener('pointercancel', end);
+}
+
+function initRipple(){
+  let last = null; // {ink, x, y}
+  const RIPPLE_SEL = '.card,.s-item,.sd-item,.sd-label,.btn,.chip,.d-act,.ibtn,.labelbtn,.cl-all,.cl-check,.cl-addbtn,.sd-add';
+  document.addEventListener('pointerdown', e => {
+    if(e.button && e.button !== 0) return;
+    if(!e.target.closest) return;
+    const el = e.target.closest(RIPPLE_SEL);
+    if(!el) return;
+    // Klein & dezent: nur ~70% der Elementgröße
+    const r = el.getBoundingClientRect();
+    const d = Math.max(r.width, r.height) * 0.7;
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const ink = document.createElement('span');
+    ink.className = 'ripple-ink';
+    ink.style.cssText = 'width:' + d + 'px;height:' + d + 'px;left:' + (x - d / 2) + 'px;top:' + (y - d / 2) + 'px';
+    el.appendChild(ink);
+    setTimeout(() => ink.remove(), 900);
+    last = { ink, x: e.clientX, y: e.clientY };
+  }, true);
+  // Beim Scrollen (Finger bewegt sich) Ripple sofort entfernen – nur echte Taps zeigen ihn
+  document.addEventListener('pointermove', e => {
+    if(!last) return;
+    if(Math.abs(e.clientX - last.x) > 12 || Math.abs(e.clientY - last.y) > 12){
+      last.ink.remove();
+      last = null;
+    }
+  }, true);
+  document.addEventListener('pointerup', () => { last = null; }, true);
+  document.addEventListener('pointercancel', () => { last = null; }, true);
+}
+
+function initConnectivity(){
+  window.addEventListener('offline', () => toast('📴 Offline – alles bleibt lokal gespeichert'));
+  window.addEventListener('online', () => toast('📶 Wieder online'));
+}
+
+/* ---------- Service Worker & Installation ---------- */
+function initSW(){
+  if(!('serviceWorker' in navigator)) return;
+  if(!/^https?:$/.test(location.protocol)) return; // file:// → kein SW möglich
+  navigator.serviceWorker.register('./noteises-sw.js').catch(() => {});
+}
+function initInstall(){
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    $('#sideInstall').hidden = false;
+    toast('⬇️ Noteises als App installieren?', 'Installieren', async () => {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice.catch(() => ({ outcome:'dismissed' }));
+      if(choice.outcome === 'accepted') toast('✓ Noteises wird installiert');
+      deferredPrompt = null;
+      $('#sideInstall').hidden = true;
+    }, 9000);
+  });
+  window.addEventListener('appinstalled', () => {
+    toast('✓ Noteises ist auf deinem Gerät installiert');
+  });
+}
+
+/* ---------- Text von anderen Apps empfangen (Share-Target) ---------- */
+let sharedHandled = false;
+
+function handleSharedText(data){
+  if(sharedHandled) return;
+  sharedHandled = true;
+  const title = String(data.title || '').trim();
+  const text = String(data.text || '').trim();
+  const url = String(data.url || '').trim();
+  const full = text + (url && !text.includes(url) ? '\n' + url : '');
+  if(!title && !full){ sharedHandled = false; return; }
+
+  // URL bereinigen (Share-Parameter raus)
+  try { history.replaceState({}, '', location.pathname); } catch(e){}
+
+  openSheet('Notiz empfangen', []);
+  const body = $('#sheetBody');
+  body.innerHTML =
+    '<div class="lf-name" style="padding-bottom:6px">' +
+      '<textarea id="sharePreview" rows="5" readonly style="width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);line-height:1.5;resize:none">' + esc(full || title) + '</textarea>' +
+    '</div>' +
+    '<div class="lf-actions">' +
+      '<button class="btn primary" id="shareSave">Als Notiz speichern</button>' +
+      '<button class="btn" id="shareDiscard">Verwerfen</button>' +
+    '</div>';
+  $('#shareSave').addEventListener('click', () => {
+    const n = {
+      id: uid(), title: title || '', text: full, type: 'text', items: [],
+      label: '', pinned: false, createdAt: now(), updatedAt: now(),
+      sessionNew: true
+    };
+    notes.unshift(n);
+    currentId = n.id;
+    saveNow();
+    closeSheet();
+    renderList();
+    renderSidebar();
+    openNote(n.id, false);
+    toast('✓ Notiz aus geteiltem Text erstellt');
+  });
+  $('#shareDiscard').addEventListener('click', () => {
+    closeSheet();
+    toast('Geteilten Text verworfen');
+  });
+}
+function initShareTarget(){
+  // Nachricht vom Service Worker (POST-Share-Target)
+  window.addEventListener('message', e => {
+    if(e.data && e.data.type === 'noteises-share') handleSharedText(e.data);
+  });
+  // GET-Fallback (manche Browser/Plattformen) + App-Shortcuts (?new=1)
+  try {
+    const p = new URLSearchParams(location.search);
+    if(p.has('text')) handleSharedText({ title: p.get('title') || '', text: p.get('text') || '', url: p.get('url') || '' });
+    else if(p.has('new')){
+      try { history.replaceState({}, '', location.pathname); } catch(e){}
+      const type = p.get('type');
+      setTimeout(() => {
+        newNote();
+        if(type === 'list'){
+          const n = currentNote();
+          if(n){ n.type = 'list'; renderDetail(); }
+        }
+      }, 700); // nach Splash
+    }
+  } catch(e){}
+}
+
+/* ---------- Start ---------- */
+function init(){
+  initTheme();
+  loadData();
+  bindEvents();
+  initSheetDrag();
+  initKeyboard();
+  initPullToRefresh();
+  initRipple();
+  initConnectivity();
+  initBackHandler();
+  initEdgeGestures();
+  initEditorBackSwipe();
+  initSplash();
+  initHint();
+  initSW();
+  initInstall();
+  initShareTarget();
+  renderSidebar();
+  renderList();
+  renderDetail();
+  // Gestaffelter Karten-Einblend-Effekt beim ersten Start
+  const lw = $('#listWrap');
+  lw.classList.add('fresh');
+  setTimeout(() => lw.classList.remove('fresh'), 900);
+}
+if(typeof document !== 'undefined' && document.getElementById){
+  init();
+}
+</script>
+</body>
+</html>
